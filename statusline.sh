@@ -5,6 +5,7 @@
 # ── Feature flags ──────────────────────────────────────────────────────────────
 FORCE_ASCII="${CLAUDE_STATUSLINE_ASCII:-0}"
 FORCE_NERDFONT="${CLAUDE_STATUSLINE_NERDFONT:-0}"
+FORCE_GIT="${CLAUDE_STATUSLINE_GIT:-0}"
 
 # ── True-color detection ───────────────────────────────────────────────────────
 if [[ "${COLORTERM}" == "truecolor" || "${COLORTERM}" == "24bit" || -n "${WT_SESSION}" ]]; then
@@ -24,6 +25,7 @@ if [[ $TRUE_COLOR -eq 1 && $FORCE_ASCII -eq 0 ]]; then
   C_GREEN="\033[38;2;152;195;121m"
   C_RED="\033[38;2;224;108;117m"
   C_GRAY="\033[38;2;160;160;160m"
+  C_PINK="\033[38;2;255;121;198m"
 else
   C_CYAN="\033[36m"
   C_DIM="\033[2m"
@@ -31,6 +33,7 @@ else
   C_GREEN="\033[32m"
   C_RED="\033[31m"
   C_GRAY="\033[37m"
+  C_PINK="\033[35m"
 fi
 
 # ── Símbolos ───────────────────────────────────────────────────────────────────
@@ -39,18 +42,24 @@ if [[ $FORCE_ASCII -eq 1 ]]; then
   SYM_CTX="ctx:"
   SYM_CYCLE="reset:"
   SYM_WARN="!"
+  SYM_BRANCH="| "
+  SYM_FOLDER=""
   SYM_SEP=" | "
 elif [[ $FORCE_NERDFONT -eq 1 ]]; then
   SYM_MODEL=$' '      #  robot
   SYM_CTX=$' '        #  gráfico
   SYM_CYCLE=$'↺ '     # ↺ seta de reset
   SYM_WARN=$' '       #  aviso
+  SYM_BRANCH=$' '     #  branch git (Powerline)
+  SYM_FOLDER=$' '     #  pasta
   SYM_SEP=" │ "
 else
   SYM_MODEL="◆ "
   SYM_CTX=" "
   SYM_CYCLE="↺ "
   SYM_WARN=" ⚠"
+  SYM_BRANCH="⎇ "
+  SYM_FOLDER=""
   SYM_SEP=" │ "
 fi
 
@@ -75,6 +84,8 @@ JSON_INPUT=$(cat)
   IFS= read -r rate_7d
   IFS= read -r resets_at_5h
   IFS= read -r resets_at_7d
+  IFS= read -r git_branch
+  IFS= read -r full_dir
   IFS= read -r _sentinel
 } <<< "$(jq -r '
   .model.display_name // "Unknown",
@@ -84,6 +95,8 @@ JSON_INPUT=$(cat)
   ((.rate_limits.seven_day.used_percentage // -1) | floor),
   ((.rate_limits.five_hour.resets_at // -1) | floor),
   ((.rate_limits.seven_day.resets_at // -1) | floor),
+  (.worktree.branch // ""),
+  (.workspace.current_dir // ""),
   "END"
 ' <<< "$JSON_INPUT" | tr -d '\r')"
 
@@ -199,7 +212,61 @@ if (( rate_7d >= 0 )); then
   fi
 fi
 
+# ── Linha 2: branch + pasta (opcional, requer CLAUDE_STATUSLINE_GIT=1) ─────────
 line2=""
+
+if [[ $FORCE_GIT -eq 1 ]]; then
+  # Extrai nome da pasta atual
+  curr_dir="${full_dir//\\//}"
+  curr_dir="${curr_dir%/}"
+  curr_dir="${curr_dir##*/}"
+  [[ -z "$curr_dir" ]] && curr_dir="$full_dir"
+
+  # Converte path Windows para git (C:\path → /c/path)
+  git_dir="$full_dir"
+  if [[ "$git_dir" =~ ^[A-Za-z]:[\\/] ]]; then
+    _drive=$(printf '%s' "${git_dir:0:1}" | tr '[:upper:]' '[:lower:]')
+    git_dir="/${_drive}${git_dir:2}"
+    git_dir="${git_dir//\\//}"
+  fi
+
+  # Se o JSON não trouxer a branch, busca via git diretamente
+  if [[ -z "$git_branch" && -n "$git_dir" ]]; then
+    git_branch=$(git -C "$git_dir" rev-parse --abbrev-ref HEAD 2>/dev/null)
+  fi
+
+  # Branch + dirty flag com cache de 5s (GNU stat -c %Y)
+  branch_str=""
+  if [[ -n "$git_branch" ]]; then
+    CACHE_FILE="/tmp/claude-statusline-git-cache"
+    cache_valid=0
+    if [[ -f "$CACHE_FILE" ]]; then
+      _mtime=$(stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)
+      _cnow=$(date +%s)
+      (( (_cnow - _mtime) < 5 )) && cache_valid=1
+    fi
+
+    if [[ $cache_valid -eq 1 ]]; then
+      IFS='|' read -r _branch _dirty < "$CACHE_FILE"
+    else
+      _branch="$git_branch"
+      _dirty=""
+      if [[ -n "$git_dir" ]] && ! git -C "$git_dir" diff --quiet 2>/dev/null || \
+         [[ -n "$git_dir" ]] && ! git -C "$git_dir" diff --cached --quiet 2>/dev/null; then
+        _dirty="*"
+      fi
+      printf '%s|%s' "$_branch" "$_dirty" > "$CACHE_FILE"
+    fi
+
+    branch_str="${C_PINK}${SYM_BRANCH}${_branch}${C_YELLOW}${_dirty}${RESET}"
+  fi
+
+  [[ -n "$branch_str" ]] && line2+="$branch_str"
+  if [[ -n "$curr_dir" ]]; then
+    [[ -n "$line2" ]] && line2+="${SEP}"
+    line2+="${C_CYAN}${SYM_FOLDER}${curr_dir}${RESET}"
+  fi
+fi
 
 printf "%b\n" "$line1"
 printf "%b\n" "$line2"
