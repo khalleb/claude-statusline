@@ -1,8 +1,8 @@
 # claude-statusline
 
-Status line minimalista e de linha única para o [Claude Code](https://claude.ai/code) rodando no **Git Bash no Windows**.
+Status line minimalista para o [Claude Code](https://claude.ai/code) rodando no **Git Bash no Windows**.
 
-Exibe modelo, uso do contexto, limite da sessão atual e limite semanal — tudo em uma linha, atualizado após cada resposta.
+Exibe modelo, uso do contexto, limite da sessão atual e limite semanal — tudo em uma linha, atualizado após cada resposta. Opcionalmente exibe a branch git atual e o nome da pasta em uma segunda linha.
 
 > 📖 [Read in English](README.md)
 
@@ -12,7 +12,10 @@ Exibe modelo, uso do contexto, limite da sessão atual e limite semanal — tudo
 
 ```
  Sonnet 4.6 (200K context) │  ███░░░░░░░░░░░░░░░░░ 16% │ 5h ██░░░░░░░░ 31% ↺ 2h 33m │ 7d ↺ 2d
+ master │  meu-projeto
 ```
+
+**Linha 1 — sempre visível:**
 
 | Segmento | Descrição |
 |----------|-----------|
@@ -21,6 +24,13 @@ Exibe modelo, uso do contexto, limite da sessão atual e limite semanal — tudo
 | `███░░░ 16%` | Barra de uso do contexto |
 | `5h ██░░░ 31% ↺ 2h 33m` | Barra de uso da sessão de 5h + tempo para reset |
 | `7d ↺ 2d` | Tempo para reset da sessão semanal |
+
+**Linha 2 — opcional (`CLAUDE_STATUSLINE_GIT=1`):**
+
+| Segmento | Descrição |
+|----------|-----------|
+| ` master` | Branch git atual (sufixo `*` se houver alterações não commitadas) |
+| ` meu-projeto` | Nome da pasta onde o Claude Code foi iniciado |
 
 **Cores:**
 - 🟢 Verde — 0–69%
@@ -113,6 +123,7 @@ export CLAUDE_STATUSLINE_NERDFONT=1
 | Variável | Valor | Efeito |
 |----------|-------|--------|
 | `CLAUDE_STATUSLINE_NERDFONT` | `1` | Ativa ícones Nerd Font (requer CaskaydiaCove NF) |
+| `CLAUDE_STATUSLINE_GIT` | `1` | Exibe branch git e nome da pasta na linha 2 |
 | `CLAUDE_STATUSLINE_ASCII` | `1` | Força modo ASCII puro (sem Unicode, sem cores) |
 | `CLAUDE_STATUSLINE_DEBUG` | `1` | Grava o JSON em `/tmp/claude-sl-debug.json` para inspeção |
 
@@ -134,9 +145,11 @@ model.display_name
 context_window.used_percentage
 context_window.context_window_size
 rate_limits.five_hour.used_percentage
-rate_limits.five_hour.resets_at       ← Unix timestamp (segundos)
+rate_limits.five_hour.resets_at         ← Unix timestamp (segundos)
 rate_limits.seven_day.used_percentage
-rate_limits.seven_day.resets_at       ← Unix timestamp (segundos)
+rate_limits.seven_day.resets_at         ← Unix timestamp (segundos)
+worktree.branch                         ← usado pelo CLAUDE_STATUSLINE_GIT (fallback para git command)
+workspace.current_dir                   ← usado pelo CLAUDE_STATUSLINE_GIT
 ```
 
 > **Obs.:** Os dados de rate limit (`5h` / `7d`) só estão disponíveis nos planos Claude Pro e Max. O status line oculta esses segmentos automaticamente quando não disponíveis.
@@ -160,6 +173,7 @@ claude-statusline/
 ├── statusline.sh      # Script principal — chamado pelo Claude Code a cada resposta
 ├── install.sh         # Instalador — copia o script e configura o settings.json
 ├── test-mock.sh       # Suite de testes com payloads JSON simulados
+├── CLAUDE.md          # Contexto para o Claude Code ao trabalhar neste repositório
 ├── README.md          # Documentação em inglês
 └── README.pt-BR.md    # Documentação em português
 ```
@@ -178,7 +192,7 @@ Este projeto é inspirado no [claude-code-statusline](https://github.com/KCChien
 | Detecção true-color | `COLORTERM` | `COLORTERM` + `WT_SESSION` |
 | Paths Windows | Não suportado | Converte `C:\caminho` → `/c/caminho` |
 | Tempo de reset | Não implementado | Timestamp Unix `resets_at` |
-| Layout | 2 linhas | **1 linha** |
+| Layout | 2 linhas | **1 linha + 2ª linha opcional** |
 
 ---
 
