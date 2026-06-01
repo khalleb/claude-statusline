@@ -117,18 +117,35 @@ Then set the font in **Windows Terminal** (`settings.json`):
 }
 ```
 
-Finally, enable Nerd Font mode in `~/.bashrc`:
-```bash
-export CLAUDE_STATUSLINE_NERDFONT=1
+Finally, enable Nerd Font mode — add to `~/.claude/settings.json` (works in any shell):
+```json
+{
+  "env": {
+    "CLAUDE_STATUSLINE_NERDFONT": "1"
+  }
+}
 ```
 
 ---
 
 ## Environment Variables
 
+The recommended way to set variables is via `~/.claude/settings.json` under the `env` key — this works regardless of which shell (Git Bash, PowerShell, etc.) is used to launch Claude Code:
+
+```json
+{
+  "env": {
+    "CLAUDE_STATUSLINE_NERDFONT": "1",
+    "CLAUDE_STATUSLINE_GIT": "1"
+  }
+}
+```
+
+> **Why not `~/.bashrc`?** Variables in `~/.bashrc` are only loaded by Git Bash. If you launch Claude Code from PowerShell or another shell, those variables won't be set and features like line 2 won't appear.
+
 | Variable | Value | Effect |
 |----------|-------|--------|
-| `CLAUDE_STATUSLINE_NERDFONT` | `1` | Enable Nerd Font icons (requires CaskaydiaCove NF) |
+| `CLAUDE_STATUSLINE_NERDFONT` | `1` | Enable Nerd Font icons (requires CaskaydiaCove NF or JetBrainsMono NF) |
 | `CLAUDE_STATUSLINE_GIT` | `1` | Show git branch and folder name on line 2 |
 | `CLAUDE_STATUSLINE_ASCII` | `1` | Force plain ASCII mode (no Unicode, no colors) |
 | `CLAUDE_STATUSLINE_DEBUG` | `1` | Write raw JSON to `/tmp/claude-sl-debug.json` for inspection |
