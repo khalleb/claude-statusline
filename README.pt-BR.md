@@ -53,7 +53,7 @@ Exibe modelo, uso do contexto, limite da sessão atual e limite semanal — tudo
 
 **1. Clone o repositório:**
 ```bash
-git clone https://github.com/SEU_USUARIO/claude-statusline.git
+git clone https://github.com/khalleb/claude-statusline.git
 cd claude-statusline
 ```
 

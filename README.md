@@ -53,7 +53,7 @@ Displays model, context usage, current session limit, and weekly session limit â
 
 **1. Clone the repository:**
 ```bash
-git clone https://github.com/YOUR_USERNAME/claude-statusline.git
+git clone https://github.com/khalleb/claude-statusline.git
 cd claude-statusline
 ```
 
