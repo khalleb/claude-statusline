@@ -10,6 +10,12 @@ Displays model, context usage, current session limit, and weekly session limit �
 
 ## Preview
 
+**Git Bash**
+![Git Bash preview](docs/preview-gitbash.png)
+
+**PowerShell**
+![PowerShell preview](docs/preview-powershell.png)
+
 ```
  Sonnet 4.6 (200K context) │  ███░░░░░░░░░░░░░░░░░ 16% │ 5h ██░░░░░░░░ 31% ↺ 2h 33m │ 7d ↺ 2d
  master │  my-project
