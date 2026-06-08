@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Does
 
-A status bar for Claude Code running in **Git Bash or PowerShell on Windows**. Claude Code calls `statusline.sh` via its `statusLine` hook after every response, piping session state as JSON to stdin. The script outputs two lines; Claude Code renders them in the status area.
+A status bar for Claude Code running in **Git Bash or PowerShell on Windows**, and also in **WSL/Linux**. Claude Code calls `statusline.sh` via its `statusLine` hook after every response, piping session state as JSON to stdin. The script outputs two lines; Claude Code renders them in the status area.
 
-- **Line 1** (always): model + context bar + 5h session bar + reset times
-- **Line 2** (optional, `CLAUDE_STATUSLINE_GIT=1`): git branch + current folder
+- **Line 1** (always): model + optional output style + context bar + 5h session bar + reset times + optional session cost/lines (`CLAUDE_STATUSLINE_COST=1`)
+- **Line 2** (optional): git branch (`CLAUDE_STATUSLINE_GIT=1`) + current folder name, or full path (`CLAUDE_STATUSLINE_PWD=1`)
 
 ## Running Tests
 
@@ -54,14 +54,18 @@ Set via `~/.claude/settings.json` under the `env` key — this works regardless 
 |----------|--------|
 | `CLAUDE_STATUSLINE_NERDFONT=1` | Nerd Font icons (requires JetBrainsMono NF or CaskaydiaCove NF) |
 | `CLAUDE_STATUSLINE_GIT=1` | Line 2: git branch + folder name |
+| `CLAUDE_STATUSLINE_PWD=1` | Line 2: full current path instead of just the folder name (`$HOME` shown as `~`) |
+| `CLAUDE_STATUSLINE_COST=1` | Line 1: session cost (`$X.XX`) + lines added/removed (`+N -N`) |
 | `CLAUDE_STATUSLINE_ASCII=1` | Plain ASCII mode, no Unicode, no colors |
 | `CLAUDE_STATUSLINE_DEBUG=1` | Writes raw JSON to `/tmp/claude-sl-debug.json` |
+
+Output style (`output_style.name`) is shown automatically on line 1 — only when it is set and not `default`. No flag needed.
 
 ## Architecture
 
 Everything runs in a single file: `statusline.sh`. Execution order:
 
-1. **Feature flags** — `FORCE_ASCII`, `FORCE_NERDFONT`, `FORCE_GIT` from env vars
+1. **Feature flags** — `FORCE_ASCII`, `FORCE_NERDFONT`, `FORCE_GIT`, `FORCE_PWD`, `FORCE_COST` from env vars
 2. **True-color detection** — checks `COLORTERM` and `WT_SESSION` (Windows Terminal)
 3. **Symbol set selection** — three tiers: ASCII / Unicode default / Nerd Font
 4. **JSON parse** — single `jq` call reads all fields at once; `tr -d '\r'` strips Windows CRLF from jq.exe output; sentinel `"END"` prevents `$()` from swallowing trailing newlines
@@ -69,8 +73,8 @@ Everything runs in a single file: `statusline.sh`. Execution order:
 6. **`make_bar <pct> <width>`** — writes result to `BAR_RESULT`; renders a true-color gradient (20-entry RGB arrays), ANSI fallback, or ASCII `[###---]`
 7. **`format_reset <secs>`** — converts seconds to `Xd`, `Xd Yh`, `Xh`, `Xh Ym`, or `Xm`; omits trailing zero units
 8. **`pct_color <pct>`** — returns colored percentage string (green/yellow/red thresholds: 70/90)
-9. **Line 1 assembly** — model + context bar + 5h bar + reset times
-10. **Line 2 assembly** — only when `FORCE_GIT=1`; gets branch from `worktree.branch` JSON field, falls back to `git rev-parse --abbrev-ref HEAD` when empty; dirty flag `*` via git diff with 5s cache
+9. **Line 1 assembly** — model + output style (when non-`default`) + context bar + 5h bar + reset times + session cost/lines (when `FORCE_COST=1`); cost is parsed as integer cents (`total_cost_usd * 100 | floor`) to avoid float math in bash
+10. **Line 2 assembly** — when `FORCE_GIT=1` or `FORCE_PWD=1`; branch (gated by `FORCE_GIT`) from `worktree.branch` JSON field, falls back to `git rev-parse --abbrev-ref HEAD` when empty, dirty flag `*` via git diff with 5s cache; path shows full normalised dir (`FORCE_PWD`) or just the folder basename
 
 ## Windows-Specific Behaviour
 
@@ -79,6 +83,7 @@ Everything runs in a single file: `statusline.sh`. Execution order:
 - Windows paths like `C:\path` must be converted to `/c/path` for git commands (see path normalisation block)
 - True-color is detected via `$WT_SESSION` (Windows Terminal sets this) in addition to the standard `$COLORTERM`
 - `worktree.branch` from Claude Code JSON is often empty — always add `git rev-parse` fallback
+- Shell scripts are forced to **LF** line endings via `.gitattributes` (`*.sh text eol=lf`) so they run under both Git Bash and WSL/Linux; `install.sh` also strips `\r` (`tr -d '\r'`) when copying, so a CRLF source never breaks the installed copy
 
 ## Key JSON Fields (from Claude Code)
 
@@ -90,7 +95,11 @@ rate_limits.five_hour.resets_at         Unix timestamp in seconds
 rate_limits.seven_day.used_percentage   float; -1 when unavailable
 rate_limits.seven_day.resets_at         Unix timestamp in seconds
 worktree.branch                         string; often empty — use git fallback
-workspace.current_dir                   Windows path e.g. C:\repositorios\project
+workspace.current_dir                   Windows path e.g. C:\repositorios\project (or /mnt/... on WSL)
+cost.total_cost_usd                     float; session cost in USD (shown with CLAUDE_STATUSLINE_COST=1)
+cost.total_lines_added                  integer; lines added this session
+cost.total_lines_removed                integer; lines removed this session
+output_style.name                       string; current output style — shown on line 1 when not "default"
 ```
 
-Rate limit fields are only present on Claude Pro/Max plans. The script hides those segments when `used_percentage` is -1.
+Rate limit fields are only present on Claude Pro/Max plans. The script hides those segments when `used_percentage` is -1. The `cost.*` fields default to `0` (and `output_style.name` to empty) when absent, so those segments degrade gracefully.

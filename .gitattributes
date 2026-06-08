@@ -1,0 +1,9 @@
+# Normaliza finais de linha automaticamente
+* text=auto
+
+# Scripts shell SEMPRE com LF — assim rodam tanto no Git Bash (Windows)
+# quanto no WSL/Linux sem quebrar por causa do \r (CRLF)
+*.sh text eol=lf
+
+# Scripts PowerShell ficam com CRLF (padrão Windows)
+*.ps1 text eol=crlf
