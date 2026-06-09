@@ -183,10 +183,14 @@ rate_limits.five_hour.resets_at         ← Unix timestamp (seconds)
 rate_limits.seven_day.used_percentage
 rate_limits.seven_day.resets_at         ← Unix timestamp (seconds)
 worktree.branch                         ← used by CLAUDE_STATUSLINE_GIT (falls back to git command)
-workspace.current_dir                   ← used by CLAUDE_STATUSLINE_GIT
+workspace.current_dir                   ← used by CLAUDE_STATUSLINE_GIT / CLAUDE_STATUSLINE_PWD
+cost.total_cost_usd                     ← used by CLAUDE_STATUSLINE_COST
+cost.total_lines_added                  ← used by CLAUDE_STATUSLINE_COST
+cost.total_lines_removed                ← used by CLAUDE_STATUSLINE_COST
+output_style.name                       ← shown on line 1 automatically when not "default"
 ```
 
-> **Note:** Rate limit data (`5h` / `7d`) is only available on Claude Pro and Max plans. The status line hides those segments gracefully when unavailable.
+> **Note:** Rate limit data (`5h` / `7d`) is only available on Claude Pro and Max plans. The status line hides those segments gracefully when unavailable. The `cost.*` fields and `output_style.name` default to `0`/empty when absent, so those segments degrade gracefully too.
 
 ---
 
