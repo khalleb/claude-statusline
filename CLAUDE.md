@@ -59,8 +59,11 @@ Set via `~/.claude/settings.json` under the `env` key — this works regardless 
 | `CLAUDE_STATUSLINE_ASCII=1` | Plain ASCII mode, no Unicode, no colors |
 | `CLAUDE_STATUSLINE_DEBUG=1` | Writes raw JSON to `/tmp/claude-sl-debug.json` |
 | `CLAUDE_STATUSLINE_NOUPDATE=1` | Disables the GitHub update check entirely |
+| `CLAUDE_STATUSLINE_UPDATE_MODE=prompt\|auto\|reminder` | Controls `statusline-update.sh` behavior (default: `prompt`) |
 
 Output style (`output_style.name`) is shown automatically on line 1 — only when it is set and not `default`. No flag needed.
+
+When a new GitHub release is available, `↑ x.y.z` appears on line 1. To update, run `bash ~/.claude/statusline-update.sh` — it fetches the new script from the release tag, backs up the old file, and updates itself. Behavior is controlled by `CLAUDE_STATUSLINE_UPDATE_MODE` (prompt/auto/reminder/disabled).
 
 ## Architecture
 

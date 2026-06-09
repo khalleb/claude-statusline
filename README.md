@@ -161,8 +161,24 @@ The recommended way to set variables is via `~/.claude/settings.json` under the 
 | `CLAUDE_STATUSLINE_ASCII` | `1` | Force plain ASCII mode (no Unicode, no colors) |
 | `CLAUDE_STATUSLINE_DEBUG` | `1` | Write raw JSON to `/tmp/claude-sl-debug.json` for inspection |
 | `CLAUDE_STATUSLINE_NOUPDATE` | `1` | Disable the GitHub update check |
+| `CLAUDE_STATUSLINE_UPDATE_MODE` | `prompt` \| `auto` \| `reminder` | Controls updater behavior (default: `prompt`) |
 
-When a new release is available, line 1 shows `↑ x.y.z` automatically — no configuration needed. The check runs once per day in the background (cached in `/tmp/claude-statusline-update-cache`) and requires `curl`.
+When a new release is available, line 1 shows `↑ x.y.z` automatically. To update, run:
+
+```bash
+bash ~/.claude/statusline-update.sh
+```
+
+The updater fetches the new script directly from the GitHub release, backs up your current install to `.bak`, and updates itself too. Modes:
+
+| Mode | Behavior |
+|------|----------|
+| `prompt` (default) | Asks "Update to vX.Y.Z? [Y/n]" |
+| `auto` | Updates silently without asking |
+| `reminder` | Only prints the update command, does nothing |
+| `disabled` | Exits immediately |
+
+The background version check runs once per day (cached in `/tmp/claude-statusline-update-cache`) and requires `curl`.
 
 ---
 

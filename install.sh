@@ -33,12 +33,17 @@ if ! command -v git &>/dev/null; then
   echo "[AVISO] git não encontrado — branch e dirty flag não serão exibidos"
 fi
 
-# ── Cópia do script ────────────────────────────────────────────────────────────
+# ── Cópia dos scripts ──────────────────────────────────────────────────────────
 # Remove CR (\r) na cópia para funcionar tanto no Git Bash quanto no WSL/Linux
 mkdir -p "$(dirname "$TARGET")"
 tr -d '\r' < "$SCRIPT_DIR/statusline.sh" > "$TARGET"
 chmod +x "$TARGET"
 echo "[OK] Instalado em: $TARGET"
+
+UPDATE_TARGET="$HOME/.claude/statusline-update.sh"
+tr -d '\r' < "$SCRIPT_DIR/update.sh" > "$UPDATE_TARGET"
+chmod +x "$UPDATE_TARGET"
+echo "[OK] Updater instalado em: $UPDATE_TARGET"
 
 # ── Configuração do settings.json ─────────────────────────────────────────────
 echo ""
@@ -86,6 +91,11 @@ echo ""
 echo "Variáveis de ambiente opcionais:"
 echo "  CLAUDE_STATUSLINE_ASCII=1      — modo ASCII puro (sem Unicode)"
 echo "  CLAUDE_STATUSLINE_NERDFONT=1   — ícones Nerd Font"
-echo "  CLAUDE_STATUSLINE_GIT=1        — linha 2: branch + nome da pasta"
-echo "  CLAUDE_STATUSLINE_PWD=1        — linha 2: caminho completo (no lugar do nome da pasta)"
-echo "  CLAUDE_STATUSLINE_COST=1       — custo da sessão + linhas adicionadas/removidas"
+echo "  CLAUDE_STATUSLINE_GIT=1                            — linha 2: branch + nome da pasta"
+echo "  CLAUDE_STATUSLINE_PWD=1                            — linha 2: caminho completo"
+echo "  CLAUDE_STATUSLINE_COST=1                           — custo da sessão + linhas alteradas"
+echo "  CLAUDE_STATUSLINE_NOUPDATE=1                       — desativa verificação de atualização"
+echo "  CLAUDE_STATUSLINE_UPDATE_MODE=prompt|auto|reminder — modo de atualização (padrão: prompt)"
+echo ""
+echo "Para atualizar no futuro:"
+echo "  bash ~/.claude/statusline-update.sh"

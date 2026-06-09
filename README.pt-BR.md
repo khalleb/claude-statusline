@@ -161,10 +161,26 @@ A forma recomendada é definir as variáveis no `~/.claude/settings.json` na cha
 | `CLAUDE_STATUSLINE_ASCII` | `1` | Força modo ASCII puro (sem Unicode, sem cores) |
 | `CLAUDE_STATUSLINE_DEBUG` | `1` | Grava o JSON em `/tmp/claude-sl-debug.json` para inspeção |
 | `CLAUDE_STATUSLINE_NOUPDATE` | `1` | Desativa a verificação de atualização do GitHub |
+| `CLAUDE_STATUSLINE_UPDATE_MODE` | `prompt` \| `auto` \| `reminder` | Controla o comportamento do updater (padrão: `prompt`) |
 
 O `output_style.name` é exibido automaticamente na linha 1 quando definido e diferente de `"default"`. Nenhuma variável extra necessária.
 
-Quando uma nova versão é lançada, a linha 1 exibe `↑ x.y.z` automaticamente — sem configuração. A verificação roda uma vez por dia em background (cache em `/tmp/claude-statusline-update-cache`) e requer `curl`.
+Quando uma nova versão é lançada, a linha 1 exibe `↑ x.y.z` automaticamente. Para atualizar, execute:
+
+```bash
+bash ~/.claude/statusline-update.sh
+```
+
+O updater baixa o novo script direto da release do GitHub, faz backup da versão atual (`.bak`) e se atualiza também. Modos:
+
+| Modo | Comportamento |
+|------|---------------|
+| `prompt` (padrão) | Pergunta "Atualizar para vX.Y.Z? [Y/n]" |
+| `auto` | Atualiza sem perguntar |
+| `reminder` | Só exibe o comando, não faz nada |
+| `disabled` | Sai imediatamente |
+
+A verificação de versão roda uma vez por dia em background (cache em `/tmp/claude-statusline-update-cache`) e requer `curl`.
 
 ---
 
