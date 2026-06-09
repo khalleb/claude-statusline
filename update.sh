@@ -138,9 +138,10 @@ printf "\n%b\n" "${C_DIM}  Baixando v${latest}...${RESET}"
 _raw_base="https://raw.githubusercontent.com/${REPO}/refs/tags/${_tag}"
 _tmp_sl=$(mktemp)
 _tmp_up=$(mktemp)
+_tmp_cfg=$(mktemp)
 
 if ! curl -sf --max-time 30 "${_raw_base}/statusline.sh" -o "$_tmp_sl" 2>/dev/null; then
-  rm -f "$_tmp_sl" "$_tmp_up"
+  rm -f "$_tmp_sl" "$_tmp_up" "$_tmp_cfg"
   printf "%b\n" "${C_RED}  Erro ao baixar. Tente novamente mais tarde.${RESET}"
   exit 1
 fi
@@ -157,7 +158,15 @@ if [[ -s "$_tmp_up" ]]; then
   chmod +x "$SELF"
 fi
 
-rm -f "$_tmp_sl" "$_tmp_up"
+# Atualiza o configurador TUI (falha silenciosa)
+_cfg_target="$HOME/.claude/statusline-config.sh"
+curl -sf --max-time 30 "${_raw_base}/statusline-config.sh" -o "$_tmp_cfg" 2>/dev/null || true
+if [[ -s "$_tmp_cfg" ]]; then
+  tr -d '\r' < "$_tmp_cfg" > "$_cfg_target"
+  chmod +x "$_cfg_target"
+fi
+
+rm -f "$_tmp_sl" "$_tmp_up" "$_tmp_cfg"
 
 # Atualiza cache (evita notificação na próxima execução do status line)
 printf '%s' "$latest" > /tmp/claude-statusline-update-cache
