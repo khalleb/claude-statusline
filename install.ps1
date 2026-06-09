@@ -47,8 +47,15 @@ if (-not (Test-Path $Source)) {
 }
 
 New-Item -ItemType Directory -Force -Path $ClaudeDir | Out-Null
-Copy-Item -Path $Source -Destination $Target -Force
-Write-Host "[OK] Instalado em: $Target" -ForegroundColor Green
+
+# Copia removendo CR (\r) para garantir LF — assim o statusline.sh roda tanto no
+# Git Bash quanto no WSL/Linux sem quebrar por causa de CRLF (ex.: core.autocrlf).
+# Le/escreve como UTF-8 sem BOM para preservar os simbolos Unicode do script.
+$scriptText = [System.IO.File]::ReadAllText($Source)
+$scriptText = $scriptText.Replace("`r", "")
+$utf8NoBomSh = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($Target, $scriptText, $utf8NoBomSh)
+Write-Host "[OK] Instalado em: $Target (LF, UTF-8)" -ForegroundColor Green
 
 # ── Configuração do settings.json ─────────────────────────────────────────────
 Write-Host ""
@@ -116,3 +123,5 @@ Write-Host "Variaveis de ambiente opcionais (defina em ~/.claude/settings.json, 
 Write-Host "  CLAUDE_STATUSLINE_ASCII=1      - modo ASCII puro (sem Unicode)"
 Write-Host "  CLAUDE_STATUSLINE_NERDFONT=1   - icones Nerd Font"
 Write-Host "  CLAUDE_STATUSLINE_GIT=1        - linha 2: branch git + pasta"
+Write-Host "  CLAUDE_STATUSLINE_PWD=1        - linha 2: caminho completo (no lugar do nome da pasta)"
+Write-Host "  CLAUDE_STATUSLINE_COST=1       - custo da sessao + linhas adicionadas/removidas"
