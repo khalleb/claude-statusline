@@ -67,6 +67,15 @@ if (Test-Path $UpdateSource) {
     Write-Host "[OK] Updater instalado em: $UpdateTarget (LF, UTF-8)" -ForegroundColor Green
 }
 
+$ConfigSource = Join-Path $ScriptDir 'statusline-config.sh'
+$ConfigTarget = Join-Path $ClaudeDir 'statusline-config.sh'
+if (Test-Path $ConfigSource) {
+    $configText = [System.IO.File]::ReadAllText($ConfigSource)
+    $configText = $configText.Replace("`r", "")
+    [System.IO.File]::WriteAllText($ConfigTarget, $configText, $utf8NoBomSh)
+    Write-Host "[OK] Configurador instalado em: $ConfigTarget (LF, UTF-8)" -ForegroundColor Green
+}
+
 # ── Configuração do settings.json ─────────────────────────────────────────────
 Write-Host ""
 Write-Host "==> Configuracao necessaria em: $Settings"

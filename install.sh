@@ -45,6 +45,11 @@ tr -d '\r' < "$SCRIPT_DIR/update.sh" > "$UPDATE_TARGET"
 chmod +x "$UPDATE_TARGET"
 echo "[OK] Updater instalado em: $UPDATE_TARGET"
 
+CONFIG_TARGET="$HOME/.claude/statusline-config.sh"
+tr -d '\r' < "$SCRIPT_DIR/statusline-config.sh" > "$CONFIG_TARGET"
+chmod +x "$CONFIG_TARGET"
+echo "[OK] Configurador instalado em: $CONFIG_TARGET"
+
 # ── Configuração do settings.json ─────────────────────────────────────────────
 echo ""
 echo "==> Configuração necessária em: $SETTINGS"
