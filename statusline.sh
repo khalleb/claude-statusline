@@ -205,7 +205,7 @@ pct_color() {
 SEP="${C_DIM}${SYM_SEP}${RESET}"
 
 # ── Versão e verificação de atualização ───────────────────────────────────────
-VERSION="1.0.0"
+VERSION="1.1.0"
 update_str=""
 if [[ $FORCE_NOUPDATE -eq 0 ]] && command -v curl &>/dev/null; then
   _UPDATE_CACHE="/tmp/claude-statusline-update-cache"
