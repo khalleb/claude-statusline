@@ -161,26 +161,27 @@ A forma recomendada é definir as variáveis no `~/.claude/settings.json` na cha
 | `CLAUDE_STATUSLINE_ASCII` | `1` | Força modo ASCII puro (sem Unicode, sem cores) |
 | `CLAUDE_STATUSLINE_DEBUG` | `1` | Grava o JSON em `/tmp/claude-sl-debug.json` para inspeção |
 | `CLAUDE_STATUSLINE_NOUPDATE` | `1` | Desativa a verificação de atualização do GitHub |
-| `CLAUDE_STATUSLINE_UPDATE_MODE` | `prompt` \| `auto` \| `reminder` | Controla o comportamento do updater (padrão: `prompt`) |
+| `CLAUDE_STATUSLINE_UPDATE_MODE` | `prompt` \| `auto` \| `reminder` \| `disabled` | Controla o comportamento do updater (padrão: `prompt`) |
+| `CLAUDE_STATUSLINE_UPDATE_FREQ` | número | Frequência de verificação em dias (padrão: `1`) |
 
 O `output_style.name` é exibido automaticamente na linha 1 quando definido e diferente de `"default"`. Nenhuma variável extra necessária.
 
-Quando uma nova versão é lançada, a linha 1 exibe `↑ x.y.z` automaticamente. Para atualizar, execute:
+Quando uma nova versão é lançada, a linha 1 exibe um link clicável `↑ x.y.z` (Windows Terminal, VSCode, iTerm2, Kitty). Para atualizar, execute:
 
 ```bash
 bash ~/.claude/statusline-update.sh
 ```
 
-O updater baixa o novo script direto da release do GitHub, faz backup da versão atual (`.bak`) e se atualiza também. Modos:
+O updater exibe o **changelog de todas as versões puladas**, baixa o novo script da release do GitHub, faz backup da versão atual (`.bak`) e se atualiza também. Modos:
 
 | Modo | Comportamento |
 |------|---------------|
 | `prompt` (padrão) | Pergunta "Atualizar para vX.Y.Z? [Y/n]" |
-| `auto` | Atualiza sem perguntar |
+| `auto` | Atualiza sem perguntar — também disparado automaticamente pelo status line |
 | `reminder` | Só exibe o comando, não faz nada |
 | `disabled` | Sai imediatamente |
 
-A verificação de versão roda uma vez por dia em background (cache em `/tmp/claude-statusline-update-cache`) e requer `curl`.
+A verificação roda na frequência configurada em background (cache em `/tmp/claude-statusline-update-cache`) e requer `curl`. Um lock file (`/tmp/claude-statusline-update.lock`) impede atualizações simultâneas.
 
 ---
 

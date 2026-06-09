@@ -7,6 +7,7 @@ TARGET="$HOME/.claude/statusline.sh"
 SELF="$HOME/.claude/statusline-update.sh"
 REPO="khalleb/claude-statusline"
 UPDATE_MODE="${CLAUDE_STATUSLINE_UPDATE_MODE:-prompt}"
+_LOCK="/tmp/claude-statusline-update.lock"
 
 # ── Modo disabled ──────────────────────────────────────────────────────────────
 [[ "$UPDATE_MODE" == "disabled" ]] && exit 0
@@ -30,6 +31,23 @@ else
   RAINBOW=("" "" "" "" "" "" "")
 fi
 
+# ── Lock file — impede execuções simultâneas ───────────────────────────────────
+if [[ -d "$_LOCK" ]]; then
+  _lmtime=$(stat -c %Y "$_LOCK" 2>/dev/null || echo 0)
+  _lnow=$(date +%s)
+  if (( (_lnow - _lmtime) > 3600 )); then
+    rm -rf "$_LOCK"  # lock obsoleto (> 1h) — remove e continua
+  else
+    printf "%b\n" "${C_YELLOW}Atualização já em andamento. Tente novamente em instantes.${RESET}"
+    exit 0
+  fi
+fi
+if ! mkdir "$_LOCK" 2>/dev/null; then
+  printf "%b\n" "${C_YELLOW}Atualização já em andamento. Tente novamente em instantes.${RESET}"
+  exit 0
+fi
+trap 'rm -rf "$_LOCK"' EXIT
+
 # ── Dependências ───────────────────────────────────────────────────────────────
 for _dep in curl jq; do
   if ! command -v "$_dep" &>/dev/null; then
@@ -46,18 +64,18 @@ fi
 current=$(grep -m1 '^VERSION=' "$TARGET" 2>/dev/null | tr -d '"' | cut -d= -f2 | tr -d 'v ' || true)
 current="${current:-0.0.0}"
 
-# ── Consulta GitHub Releases ───────────────────────────────────────────────────
+# ── Consulta releases do GitHub (lista para changelog multi-versão) ────────────
 printf "%b\r" "${C_DIM}Verificando atualizações...${RESET}"
-_api="https://api.github.com/repos/${REPO}/releases/latest"
-_response=$(curl -sf --max-time 10 "$_api" 2>/dev/null || true)
-printf "\033[2K"  # limpa linha
+_releases_json=$(curl -sf --max-time 10 \
+  "https://api.github.com/repos/${REPO}/releases?per_page=20" 2>/dev/null || true)
+printf "\033[2K"
 
-if [[ -z "$_response" ]]; then
+if [[ -z "$_releases_json" ]]; then
   printf "%b\n" "${C_RED}Não foi possível contatar o GitHub. Verifique sua conexão.${RESET}"
   exit 1
 fi
 
-_tag=$(printf '%s' "$_response" | jq -r '.tag_name // empty' | tr -d '\r')
+_tag=$(printf '%s' "$_releases_json" | jq -r '.[0].tag_name // empty' | tr -d '\r')
 latest=$(printf '%s' "$_tag" | tr -d 'v ')
 
 if [[ -z "$latest" ]]; then
@@ -74,15 +92,25 @@ fi
 # ── Atualização disponível ─────────────────────────────────────────────────────
 printf "\n%b\n" "${C_YELLOW}${BOLD}  ↑ Atualização disponível: v${current} → v${latest}${RESET}"
 
-# Release notes (primeiras linhas do body)
-_notes=$(printf '%s' "$_response" | jq -r '.body // empty' | tr -d '\r' | head -15)
-if [[ -n "$_notes" ]]; then
-  printf "\n%b\n" "${C_DIM}  O que há de novo:${RESET}"
-  while IFS= read -r _line; do
-    [[ -n "$_line" ]] && printf "  %b\n" "${C_DIM}${_line}${RESET}"
-  done <<< "$_notes"
-  echo
-fi
+# Changelog entre versões — mostra todas as releases entre current e latest
+printf "\n%b\n" "${C_DIM}  O que há de novo:${RESET}"
+_showed_notes=0
+while IFS= read -r _rel; do
+  _rver=$(printf '%s' "$_rel" | jq -r '.tag_name // empty' | tr -d '\rv ')
+  [[ -z "$_rver" ]] && continue
+  [[ "$_rver" == "$current" ]] && break
+  _rtag=$(printf '%s' "$_rel" | jq -r '.tag_name' | tr -d '\r')
+  _rbody=$(printf '%s' "$_rel" | jq -r '.body // empty' | tr -d '\r')
+  printf "\n  %b\n" "${C_YELLOW}${BOLD}${_rtag}${RESET}"
+  if [[ -n "$_rbody" ]]; then
+    while IFS= read -r _bline; do
+      [[ -n "$_bline" ]] && printf "  %b\n" "${C_DIM}${_bline}${RESET}"
+    done <<< "$(printf '%s' "$_rbody" | head -10)"
+  fi
+  _showed_notes=1
+done < <(printf '%s' "$_releases_json" | jq -c '.[]')
+[[ $_showed_notes -eq 0 ]] && printf "  %b\n" "${C_DIM}(sem notas de release)${RESET}"
+echo
 
 # ── Modo reminder: só avisa ────────────────────────────────────────────────────
 if [[ "$UPDATE_MODE" == "reminder" ]]; then
@@ -111,22 +139,19 @@ _raw_base="https://raw.githubusercontent.com/${REPO}/refs/tags/${_tag}"
 _tmp_sl=$(mktemp)
 _tmp_up=$(mktemp)
 
-# Baixa statusline.sh
 if ! curl -sf --max-time 30 "${_raw_base}/statusline.sh" -o "$_tmp_sl" 2>/dev/null; then
   rm -f "$_tmp_sl" "$_tmp_up"
   printf "%b\n" "${C_RED}  Erro ao baixar. Tente novamente mais tarde.${RESET}"
   exit 1
 fi
 
-# Baixa update.sh (opcional — falha silenciosa)
-curl -sf --max-time 30 "${_raw_base}/update.sh" -o "$_tmp_up" 2>/dev/null || true
-
 # Backup e instalação do statusline.sh
 cp "$TARGET" "${TARGET}.bak"
 tr -d '\r' < "$_tmp_sl" > "$TARGET"
 chmod +x "$TARGET"
 
-# Atualiza o próprio script de update (se baixou com sucesso)
+# Atualiza o próprio script de update (falha silenciosa)
+curl -sf --max-time 30 "${_raw_base}/update.sh" -o "$_tmp_up" 2>/dev/null || true
 if [[ -s "$_tmp_up" ]]; then
   tr -d '\r' < "$_tmp_up" > "$SELF"
   chmod +x "$SELF"

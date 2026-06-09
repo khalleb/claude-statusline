@@ -59,7 +59,8 @@ Set via `~/.claude/settings.json` under the `env` key — this works regardless 
 | `CLAUDE_STATUSLINE_ASCII=1` | Plain ASCII mode, no Unicode, no colors |
 | `CLAUDE_STATUSLINE_DEBUG=1` | Writes raw JSON to `/tmp/claude-sl-debug.json` |
 | `CLAUDE_STATUSLINE_NOUPDATE=1` | Disables the GitHub update check entirely |
-| `CLAUDE_STATUSLINE_UPDATE_MODE=prompt\|auto\|reminder` | Controls `statusline-update.sh` behavior (default: `prompt`) |
+| `CLAUDE_STATUSLINE_UPDATE_MODE=prompt\|auto\|reminder\|disabled` | Controls `statusline-update.sh` behavior (default: `prompt`) |
+| `CLAUDE_STATUSLINE_UPDATE_FREQ=N` | Check frequency in days (default: `1`) — multiplied by 86400 for cache TTL |
 
 Output style (`output_style.name`) is shown automatically on line 1 — only when it is set and not `default`. No flag needed.
 

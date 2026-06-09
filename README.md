@@ -161,24 +161,25 @@ The recommended way to set variables is via `~/.claude/settings.json` under the 
 | `CLAUDE_STATUSLINE_ASCII` | `1` | Force plain ASCII mode (no Unicode, no colors) |
 | `CLAUDE_STATUSLINE_DEBUG` | `1` | Write raw JSON to `/tmp/claude-sl-debug.json` for inspection |
 | `CLAUDE_STATUSLINE_NOUPDATE` | `1` | Disable the GitHub update check |
-| `CLAUDE_STATUSLINE_UPDATE_MODE` | `prompt` \| `auto` \| `reminder` | Controls updater behavior (default: `prompt`) |
+| `CLAUDE_STATUSLINE_UPDATE_MODE` | `prompt` \| `auto` \| `reminder` \| `disabled` | Controls updater behavior (default: `prompt`) |
+| `CLAUDE_STATUSLINE_UPDATE_FREQ` | number | Check frequency in days (default: `1`) |
 
-When a new release is available, line 1 shows `↑ x.y.z` automatically. To update, run:
+When a new release is available, line 1 shows a clickable `↑ x.y.z` link (Windows Terminal, VSCode, iTerm2, Kitty). To update, run:
 
 ```bash
 bash ~/.claude/statusline-update.sh
 ```
 
-The updater fetches the new script directly from the GitHub release, backs up your current install to `.bak`, and updates itself too. Modes:
+The updater shows the **changelog for all skipped versions**, fetches the new script from the GitHub release tag, backs up your current install to `.bak`, and updates itself too. Modes:
 
 | Mode | Behavior |
 |------|----------|
 | `prompt` (default) | Asks "Update to vX.Y.Z? [Y/n]" |
-| `auto` | Updates silently without asking |
+| `auto` | Updates silently — also triggered automatically from the status line |
 | `reminder` | Only prints the update command, does nothing |
 | `disabled` | Exits immediately |
 
-The background version check runs once per day (cached in `/tmp/claude-statusline-update-cache`) and requires `curl`.
+The background version check runs on the configured frequency (cached in `/tmp/claude-statusline-update-cache`) and requires `curl`. A lock file (`/tmp/claude-statusline-update.lock`) prevents concurrent updates.
 
 ---
 

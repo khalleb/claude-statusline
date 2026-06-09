@@ -204,15 +204,16 @@ pct_color() {
 # ── Separador ─────────────────────────────────────────────────────────────────
 SEP="${C_DIM}${SYM_SEP}${RESET}"
 
-# ── Versão e verificação de atualização (cache 24h, fetch em background) ──────
+# ── Versão e verificação de atualização ───────────────────────────────────────
 VERSION="1.0.0"
 update_str=""
 if [[ $FORCE_NOUPDATE -eq 0 ]] && command -v curl &>/dev/null; then
   _UPDATE_CACHE="/tmp/claude-statusline-update-cache"
+  _update_freq=$(( ${CLAUDE_STATUSLINE_UPDATE_FREQ:-1} * 86400 ))
   _cache_stale=1
   if [[ -f "$_UPDATE_CACHE" ]]; then
     _umtime=$(stat -c %Y "$_UPDATE_CACHE" 2>/dev/null || echo 0)
-    (( (_now - _umtime) < 86400 )) && _cache_stale=0
+    (( (_now - _umtime) < _update_freq )) && _cache_stale=0
   fi
   if [[ $_cache_stale -eq 1 ]]; then
     (curl -sf --max-time 5 \
@@ -224,7 +225,22 @@ if [[ $FORCE_NOUPDATE -eq 0 ]] && command -v curl &>/dev/null; then
     _latest=$(tr -d '\r\n v' < "$_UPDATE_CACHE")
     _current=$(printf '%s' "$VERSION" | tr -d 'v')
     if [[ -n "$_latest" && "$_latest" != "$_current" ]]; then
-      update_str="${SEP}${C_YELLOW}${SYM_UPDATE}${_latest}${RESET}"
+      # Hyperlink clicável (OSC 8) — Windows Terminal, VSCode, iTerm2, Kitty
+      _rel_url="https://github.com/khalleb/claude-statusline/releases/tag/v${_latest}"
+      if [[ -n "$WT_SESSION" || "$TERM_PROGRAM" == "vscode" || \
+            "$TERM_PROGRAM" == "iTerm.app" || -n "$KITTY_WINDOW_ID" || \
+            "$TERM_PROGRAM" == "WezTerm" ]]; then
+        update_str="${SEP}${C_YELLOW}\033]8;;${_rel_url}\033\\${SYM_UPDATE}${_latest}\033]8;;\033\\${RESET}"
+      else
+        update_str="${SEP}${C_YELLOW}${SYM_UPDATE}${_latest}${RESET}"
+      fi
+      # Modo auto: dispara o updater em background (lock evita execuções duplicadas)
+      _ULOCK="/tmp/claude-statusline-update.lock"
+      if [[ "${CLAUDE_STATUSLINE_UPDATE_MODE:-prompt}" == "auto" && ! -d "$_ULOCK" ]]; then
+        (CLAUDE_STATUSLINE_UPDATE_MODE=auto bash "$HOME/.claude/statusline-update.sh" \
+          >> /tmp/claude-statusline-auto-update.log 2>&1) &
+        disown 2>/dev/null
+      fi
     fi
   fi
 fi
