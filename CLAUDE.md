@@ -58,6 +58,7 @@ Set via `~/.claude/settings.json` under the `env` key — this works regardless 
 | `CLAUDE_STATUSLINE_COST=1` | Line 1: session cost (`$X.XX`) + lines added/removed (`+N -N`) |
 | `CLAUDE_STATUSLINE_ASCII=1` | Plain ASCII mode, no Unicode, no colors |
 | `CLAUDE_STATUSLINE_DEBUG=1` | Writes raw JSON to `/tmp/claude-sl-debug.json` |
+| `CLAUDE_STATUSLINE_NOUPDATE=1` | Disables the GitHub update check entirely |
 
 Output style (`output_style.name`) is shown automatically on line 1 — only when it is set and not `default`. No flag needed.
 
@@ -65,7 +66,7 @@ Output style (`output_style.name`) is shown automatically on line 1 — only whe
 
 Everything runs in a single file: `statusline.sh`. Execution order:
 
-1. **Feature flags** — `FORCE_ASCII`, `FORCE_NERDFONT`, `FORCE_GIT`, `FORCE_PWD`, `FORCE_COST` from env vars
+1. **Feature flags** — `FORCE_ASCII`, `FORCE_NERDFONT`, `FORCE_GIT`, `FORCE_PWD`, `FORCE_COST`, `FORCE_NOUPDATE` from env vars
 2. **True-color detection** — checks `COLORTERM` and `WT_SESSION` (Windows Terminal)
 3. **Symbol set selection** — three tiers: ASCII / Unicode default / Nerd Font
 4. **JSON parse** — single `jq` call reads all fields at once; `tr -d '\r'` strips Windows CRLF from jq.exe output; sentinel `"END"` prevents `$()` from swallowing trailing newlines
@@ -73,7 +74,8 @@ Everything runs in a single file: `statusline.sh`. Execution order:
 6. **`make_bar <pct> <width>`** — writes result to `BAR_RESULT`; renders a true-color gradient (20-entry RGB arrays), ANSI fallback, or ASCII `[###---]`
 7. **`format_reset <secs>`** — converts seconds to `Xd`, `Xd Yh`, `Xh`, `Xh Ym`, or `Xm`; omits trailing zero units
 8. **`pct_color <pct>`** — returns colored percentage string (green/yellow/red thresholds: 70/90)
-9. **Line 1 assembly** — model + output style (when non-`default`) + context bar + 5h bar + reset times + session cost/lines (when `FORCE_COST=1`); cost is parsed as integer cents (`total_cost_usd * 100 | floor`) to avoid float math in bash
+9. **Line 1 assembly** — model + output style (when non-`default`) + context bar + 5h bar + reset times + session cost/lines (when `FORCE_COST=1`) + update notice (when newer release exists on GitHub); cost is parsed as integer cents (`total_cost_usd * 100 | floor`) to avoid float math in bash
+  - **Update check** — `VERSION="x.y.z"` constant in the script; once per day (cache at `/tmp/claude-statusline-update-cache`, TTL 86400s) a background `curl` fetches the latest GitHub release tag; if `latest != current`, appends `↑ x.y.z` to line 1; requires `curl`; disabled by `FORCE_NOUPDATE=1`
 10. **Line 2 assembly** — when `FORCE_GIT=1` or `FORCE_PWD=1`; branch (gated by `FORCE_GIT`) from `worktree.branch` JSON field, falls back to `git rev-parse --abbrev-ref HEAD` when empty, dirty flag `*` via git diff with 5s cache; path shows full normalised dir (`FORCE_PWD`) or just the folder basename
 
 ## Windows-Specific Behaviour

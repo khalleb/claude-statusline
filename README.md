@@ -160,6 +160,9 @@ The recommended way to set variables is via `~/.claude/settings.json` under the 
 | `CLAUDE_STATUSLINE_COST` | `1` | Line 1: show session cost (`$X.XX`) + lines added/removed (`+N -N`) |
 | `CLAUDE_STATUSLINE_ASCII` | `1` | Force plain ASCII mode (no Unicode, no colors) |
 | `CLAUDE_STATUSLINE_DEBUG` | `1` | Write raw JSON to `/tmp/claude-sl-debug.json` for inspection |
+| `CLAUDE_STATUSLINE_NOUPDATE` | `1` | Disable the GitHub update check |
+
+When a new release is available, line 1 shows `↑ x.y.z` automatically — no configuration needed. The check runs once per day in the background (cached in `/tmp/claude-statusline-update-cache`) and requires `curl`.
 
 ---
 

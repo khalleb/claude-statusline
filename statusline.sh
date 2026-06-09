@@ -8,6 +8,7 @@ FORCE_NERDFONT="${CLAUDE_STATUSLINE_NERDFONT:-0}"
 FORCE_GIT="${CLAUDE_STATUSLINE_GIT:-0}"
 FORCE_PWD="${CLAUDE_STATUSLINE_PWD:-0}"
 FORCE_COST="${CLAUDE_STATUSLINE_COST:-0}"
+FORCE_NOUPDATE="${CLAUDE_STATUSLINE_NOUPDATE:-0}"
 
 # ── True-color detection ───────────────────────────────────────────────────────
 if [[ "${COLORTERM}" == "truecolor" || "${COLORTERM}" == "24bit" || -n "${WT_SESSION}" ]]; then
@@ -47,6 +48,7 @@ if [[ $FORCE_ASCII -eq 1 ]]; then
   SYM_BRANCH="| "
   SYM_FOLDER=""
   SYM_SEP=" | "
+  SYM_UPDATE="[update] "
 elif [[ $FORCE_NERDFONT -eq 1 ]]; then
   SYM_MODEL=$' '      #  robot
   SYM_CTX=$' '        #  gráfico
@@ -55,6 +57,7 @@ elif [[ $FORCE_NERDFONT -eq 1 ]]; then
   SYM_BRANCH=$' '     #  branch git (Powerline)
   SYM_FOLDER=$' '     #  pasta
   SYM_SEP=" │ "
+  SYM_UPDATE=$'󰚰 '    # 󰚰 update (nf-md-update)
 else
   SYM_MODEL="◆ "
   SYM_CTX=" "
@@ -63,6 +66,7 @@ else
   SYM_BRANCH="⎇ "
   SYM_FOLDER=""
   SYM_SEP=" │ "
+  SYM_UPDATE="↑ "
 fi
 
 # ── Verificação do jq ──────────────────────────────────────────────────────────
@@ -200,6 +204,31 @@ pct_color() {
 # ── Separador ─────────────────────────────────────────────────────────────────
 SEP="${C_DIM}${SYM_SEP}${RESET}"
 
+# ── Versão e verificação de atualização (cache 24h, fetch em background) ──────
+VERSION="1.0.0"
+update_str=""
+if [[ $FORCE_NOUPDATE -eq 0 ]] && command -v curl &>/dev/null; then
+  _UPDATE_CACHE="/tmp/claude-statusline-update-cache"
+  _cache_stale=1
+  if [[ -f "$_UPDATE_CACHE" ]]; then
+    _umtime=$(stat -c %Y "$_UPDATE_CACHE" 2>/dev/null || echo 0)
+    (( (_now - _umtime) < 86400 )) && _cache_stale=0
+  fi
+  if [[ $_cache_stale -eq 1 ]]; then
+    (curl -sf --max-time 5 \
+      "https://api.github.com/repos/khalleb/claude-statusline/releases/latest" \
+      2>/dev/null | jq -r '.tag_name // empty' | tr -d '\r' > "$_UPDATE_CACHE") &
+    disown 2>/dev/null
+  fi
+  if [[ -f "$_UPDATE_CACHE" ]]; then
+    _latest=$(tr -d '\r\n v' < "$_UPDATE_CACHE")
+    _current=$(printf '%s' "$VERSION" | tr -d 'v')
+    if [[ -n "$_latest" && "$_latest" != "$_current" ]]; then
+      update_str="${SEP}${C_YELLOW}${SYM_UPDATE}${_latest}${RESET}"
+    fi
+  fi
+fi
+
 # ── Linha única ───────────────────────────────────────────────────────────────
 make_bar "$ctx_pct" 20
 ctx_bar="$BAR_RESULT"
@@ -240,6 +269,9 @@ if [[ $FORCE_COST -eq 1 ]]; then
   line1+="${SEP}${C_DIM}\$${RESET}${C_GRAY}${_cost_str}${RESET}"
   line1+=" ${C_GREEN}+${lines_added}${RESET} ${C_RED}-${lines_removed}${RESET}"
 fi
+
+# Aviso de atualização disponível
+line1+="$update_str"
 
 # ── Linha 2: branch + caminho (opcional) ───────────────────────────────────────
 #   CLAUDE_STATUSLINE_GIT=1  → branch (+ dirty flag) e nome da pasta

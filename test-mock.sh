@@ -117,6 +117,21 @@ run_test "Linha 2 com branch (GIT=1)" "$(cat <<EOF
 EOF
 )" "CLAUDE_STATUSLINE_GIT=1"
 
+# Aviso de atualização: cria cache com versão mais nova para simular GitHub release
+echo "2.0.0" > /tmp/claude-statusline-update-cache
+run_test "Aviso de atualização disponível (v2.0.0)" "$(cat <<EOF
+{
+  "model": {"display_name": "Claude Sonnet 4.6"},
+  "context_window": {"used_percentage": 30, "context_window_size": 200000},
+  "rate_limits": {
+    "five_hour": {"used_percentage": 12, "resets_at": $((_now + 10800))},
+    "seven_day":  {"used_percentage": 4,  "resets_at": $((_now + 432000))}
+  }
+}
+EOF
+)"
+rm -f /tmp/claude-statusline-update-cache
+
 run_test "ASCII mode" "$(cat <<EOF
 {
   "model": {"display_name": "Claude Sonnet 4.6"},
