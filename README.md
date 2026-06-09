@@ -17,7 +17,7 @@ Displays model, context usage, current session limit, and weekly session limit �
 ![PowerShell preview](docs/preview-powershell.png)
 
 ```
- Sonnet 4.6 (200K context) │  ███░░░░░░░░░░░░░░░░░ 16% │ 5h ██░░░░░░░░ 31% ↺ 2h 33m │ 7d ↺ 2d
+ Sonnet 4.6 (200K context) │  ███░░░░░░░░░░░░░░░░░ 16% │ 5h ██░░░░░░░░ 31% ↺ 2h 33m │ 7d ↺ 2d │ $0.03 +12 -4
  master │  my-project
 ```
 
@@ -30,13 +30,15 @@ Displays model, context usage, current session limit, and weekly session limit �
 | `███░░░ 16%` | Context window usage bar |
 | `5h ██░░░ 31% ↺ 2h 33m` | 5-hour session usage bar + time until reset |
 | `7d ↺ 2d` | Time until weekly session reset |
+| `$0.03 +12 -4` | Session cost + lines added/removed (requires `CLAUDE_STATUSLINE_COST=1`) |
+| `↑ 1.2.0` | Update available (clickable link in supported terminals) |
 
-**Line 2 — optional (`CLAUDE_STATUSLINE_GIT=1`):**
+**Line 2 — optional (`CLAUDE_STATUSLINE_GIT=1` or `CLAUDE_STATUSLINE_PWD=1`):**
 
 | Segment | Description |
 |---------|-------------|
 | ` master` | Current git branch (`*` suffix if there are uncommitted changes) |
-| ` my-project` | Name of the folder where Claude Code was started |
+| ` my-project` | Folder name (default) or full path with `CLAUDE_STATUSLINE_PWD=1` |
 
 **Color coding:**
 - 🟢 Green — 0–69%
@@ -77,9 +79,9 @@ bash install.sh
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-Both installers do the same thing:
-- Check that `jq` is available (and warn if `git` / `bash` are missing)
-- Copy `statusline.sh` to `~/.claude/statusline.sh` (stripping `\r` so it stays LF)
+Both installers:
+- Check that `jq` is available
+- Copy `statusline.sh`, `statusline-update.sh`, and `statusline-config.sh` to `~/.claude/`
 - Offer to update `~/.claude/settings.json` automatically
 
 **3. Add `statusLine` to `~/.claude/settings.json`** (if not done automatically):
@@ -94,6 +96,101 @@ Both installers do the same thing:
 ```
 
 **4. Restart Claude Code.**
+
+---
+
+## Configuration
+
+There are three ways to configure claude-statusline:
+
+### 1. `/statusline` command (inside Claude Code)
+
+Type `/statusline` in any Claude Code session to open the interactive configuration menu:
+
+```
+  [X] 1  nerdfont     Ícones Nerd Font (CaskaydiaCove NF)
+  [X] 2  git          Linha 2: branch git + pasta
+  [ ] 3  pwd          Linha 2: caminho completo
+  [X] 4  cost         Custo da sessão na linha 1
+  [ ] 5  ascii        Modo ASCII puro
+  [ ] 6  noupdate     Sem verificação de update
+  [prompt] 7  update-mode  Modo de atualização
+  [1d]     8  update-freq  Frequência de verificação
+
+  ──────────────────────────────────────────────────
+  Digite o número para alternar  •  ex: 3  ou  1 5
+  "7 auto" para update-mode  •  "8 7" para 7 dias
+  "q" para sair
+```
+
+Type a number to toggle it. Type `q` to exit.
+
+### 2. Interactive TUI (terminal)
+
+Run directly in your terminal for arrow-key navigation:
+
+```bash
+bash ~/.claude/statusline-config.sh
+```
+
+- **↑↓** to navigate
+- **Space / Enter** to toggle
+- **s** to save
+- **q** to exit without saving
+
+### 3. Edit `~/.claude/settings.json` manually
+
+Add variables under the `env` key:
+
+```json
+{
+  "env": {
+    "CLAUDE_STATUSLINE_NERDFONT": "1",
+    "CLAUDE_STATUSLINE_GIT": "1"
+  }
+}
+```
+
+> **Why not `~/.bashrc`?** Variables in `~/.bashrc` are only loaded by Git Bash. If you launch Claude Code from PowerShell or another shell, those variables won't be set and features won't appear.
+
+---
+
+## Environment Variables
+
+| Variable | Value | Effect |
+|----------|-------|--------|
+| `CLAUDE_STATUSLINE_NERDFONT` | `1` | Enable Nerd Font icons (requires CaskaydiaCove NF or JetBrainsMono NF) |
+| `CLAUDE_STATUSLINE_GIT` | `1` | Show git branch and folder name on line 2 |
+| `CLAUDE_STATUSLINE_PWD` | `1` | Line 2: show the full current path instead of just the folder name (`$HOME` shown as `~`) |
+| `CLAUDE_STATUSLINE_COST` | `1` | Line 1: show session cost (`$X.XX`) + lines added/removed (`+N -N`) |
+| `CLAUDE_STATUSLINE_ASCII` | `1` | Force plain ASCII mode (no Unicode, no colors) |
+| `CLAUDE_STATUSLINE_DEBUG` | `1` | Write raw JSON to `/tmp/claude-sl-debug.json` for inspection |
+| `CLAUDE_STATUSLINE_NOUPDATE` | `1` | Disable the GitHub update check entirely |
+| `CLAUDE_STATUSLINE_UPDATE_MODE` | `prompt` \| `auto` \| `reminder` \| `disabled` | Controls updater behavior (default: `prompt`) |
+| `CLAUDE_STATUSLINE_UPDATE_FREQ` | number | Check frequency in days (default: `1`) |
+
+The `output_style.name` is shown automatically on line 1 when set and not `"default"`. No extra variable needed.
+
+---
+
+## Update Notifications
+
+When a new release is available, line 1 shows a `↑ x.y.z` notice (clickable link in Windows Terminal, VSCode, iTerm2, Kitty, WezTerm). To update, run:
+
+```bash
+bash ~/.claude/statusline-update.sh
+```
+
+The updater shows the **changelog for all skipped versions**, downloads the new script from the GitHub release tag, backs up your current install to `.bak`, and updates itself too.
+
+| Mode | Behavior |
+|------|----------|
+| `prompt` (default) | Asks "Update to vX.Y.Z? [Y/n]" |
+| `auto` | Updates silently — also triggered automatically from the status line |
+| `reminder` | Only prints the update command, does nothing |
+| `disabled` | Exits immediately |
+
+The background version check runs on the configured frequency (cached in `/tmp/claude-statusline-update-cache`) and requires `curl`. A lock file (`/tmp/claude-statusline-update.lock`) prevents concurrent updates.
 
 ---
 
@@ -126,7 +223,7 @@ Then set the font in **Windows Terminal** (`settings.json`):
 }
 ```
 
-Finally, enable Nerd Font mode — add to `~/.claude/settings.json` (works in any shell):
+Finally, enable Nerd Font mode — add to `~/.claude/settings.json`:
 ```json
 {
   "env": {
@@ -134,52 +231,6 @@ Finally, enable Nerd Font mode — add to `~/.claude/settings.json` (works in an
   }
 }
 ```
-
----
-
-## Environment Variables
-
-The recommended way to set variables is via `~/.claude/settings.json` under the `env` key — this works regardless of which shell (Git Bash, PowerShell, etc.) is used to launch Claude Code:
-
-```json
-{
-  "env": {
-    "CLAUDE_STATUSLINE_NERDFONT": "1",
-    "CLAUDE_STATUSLINE_GIT": "1"
-  }
-}
-```
-
-> **Why not `~/.bashrc`?** Variables in `~/.bashrc` are only loaded by Git Bash. If you launch Claude Code from PowerShell or another shell, those variables won't be set and features like line 2 won't appear.
-
-| Variable | Value | Effect |
-|----------|-------|--------|
-| `CLAUDE_STATUSLINE_NERDFONT` | `1` | Enable Nerd Font icons (requires CaskaydiaCove NF or JetBrainsMono NF) |
-| `CLAUDE_STATUSLINE_GIT` | `1` | Show git branch and folder name on line 2 |
-| `CLAUDE_STATUSLINE_PWD` | `1` | Line 2: show the full current path instead of just the folder name (`$HOME` shown as `~`) |
-| `CLAUDE_STATUSLINE_COST` | `1` | Line 1: show session cost (`$X.XX`) + lines added/removed (`+N -N`) |
-| `CLAUDE_STATUSLINE_ASCII` | `1` | Force plain ASCII mode (no Unicode, no colors) |
-| `CLAUDE_STATUSLINE_DEBUG` | `1` | Write raw JSON to `/tmp/claude-sl-debug.json` for inspection |
-| `CLAUDE_STATUSLINE_NOUPDATE` | `1` | Disable the GitHub update check |
-| `CLAUDE_STATUSLINE_UPDATE_MODE` | `prompt` \| `auto` \| `reminder` \| `disabled` | Controls updater behavior (default: `prompt`) |
-| `CLAUDE_STATUSLINE_UPDATE_FREQ` | number | Check frequency in days (default: `1`) |
-
-When a new release is available, line 1 shows a clickable `↑ x.y.z` link (Windows Terminal, VSCode, iTerm2, Kitty). To update, run:
-
-```bash
-bash ~/.claude/statusline-update.sh
-```
-
-The updater shows the **changelog for all skipped versions**, fetches the new script from the GitHub release tag, backs up your current install to `.bak`, and updates itself too. Modes:
-
-| Mode | Behavior |
-|------|----------|
-| `prompt` (default) | Asks "Update to vX.Y.Z? [Y/n]" |
-| `auto` | Updates silently — also triggered automatically from the status line |
-| `reminder` | Only prints the update command, does nothing |
-| `disabled` | Exits immediately |
-
-The background version check runs on the configured frequency (cached in `/tmp/claude-statusline-update-cache`) and requires `curl`. A lock file (`/tmp/claude-statusline-update.lock`) prevents concurrent updates.
 
 ---
 
@@ -220,7 +271,7 @@ output_style.name                       ← shown on line 1 automatically when n
 bash test-mock.sh
 ```
 
-Runs 5 scenarios: normal, warning (75%), danger (92%), no rate limits, and fresh session.
+Runs 10 scenarios: normal, warning (75%), danger (92%), no rate limits, fresh session, output style, session cost, git branch line, update notification, and ASCII mode.
 
 ---
 
@@ -228,13 +279,25 @@ Runs 5 scenarios: normal, warning (75%), danger (92%), no rate limits, and fresh
 
 ```
 claude-statusline/
-├── statusline.sh     # Main script — called by Claude Code on every response
-├── install.sh        # Installer (Git Bash / WSL / Linux)
-├── install.ps1       # Installer (PowerShell on Windows)
-├── test-mock.sh      # Test suite with mock JSON payloads
-├── CLAUDE.md         # Guidance for Claude Code when working in this repo
-├── README.md         # English documentation
-└── README.pt-BR.md   # Portuguese documentation
+├── statusline.sh          # Main script — called by Claude Code on every response
+├── update.sh              # Updater — run to install a new version interactively
+├── statusline-config.sh   # Interactive TUI configurator (arrow keys + space)
+├── install.sh             # Installer (Git Bash / WSL / Linux)
+├── install.ps1            # Installer (PowerShell on Windows)
+├── test-mock.sh           # Test suite with mock JSON payloads
+├── CLAUDE.md              # Guidance for Claude Code when working in this repo
+├── README.md              # English documentation
+└── README.pt-BR.md        # Portuguese documentation
+```
+
+After installation, `~/.claude/` contains:
+
+```
+~/.claude/
+├── statusline.sh          # Main script (copy)
+├── statusline-update.sh   # Updater (copy)
+├── statusline-config.sh   # TUI configurator (copy)
+└── settings.json          # Claude Code settings (statusLine + env vars)
 ```
 
 ---
@@ -245,13 +308,15 @@ This project is inspired by [claude-code-statusline](https://github.com/KCChien/
 
 | Feature | Original | This project |
 |---------|----------|--------------|
-| Platform | macOS | **Git Bash (Windows)** |
+| Platform | macOS | **Git Bash / PowerShell (Windows) and WSL/Linux** |
 | `stat` command | BSD (`-f %m`) | GNU (`-c %Y`) |
 | CRLF handling | Not needed | `tr -d '\r'` on jq output |
 | True-color detection | `COLORTERM` | `COLORTERM` + `WT_SESSION` |
 | Path handling | Unix only | Converts `C:\path` → `/c/path` |
 | Rate limit reset | Not implemented | `resets_at` Unix timestamp |
 | Layout | 2 lines | **1 line + optional 2nd line** |
+| Update notifications | None | GitHub release check + auto-updater |
+| Configuration UI | None | `/statusline` command + TUI script |
 
 ---
 
