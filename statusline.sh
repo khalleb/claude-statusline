@@ -6,6 +6,8 @@
 FORCE_ASCII="${CLAUDE_STATUSLINE_ASCII:-0}"
 FORCE_NERDFONT="${CLAUDE_STATUSLINE_NERDFONT:-0}"
 FORCE_GIT="${CLAUDE_STATUSLINE_GIT:-0}"
+FORCE_PWD="${CLAUDE_STATUSLINE_PWD:-0}"
+FORCE_COST="${CLAUDE_STATUSLINE_COST:-0}"
 
 # ── True-color detection ───────────────────────────────────────────────────────
 if [[ "${COLORTERM}" == "truecolor" || "${COLORTERM}" == "24bit" || -n "${WT_SESSION}" ]]; then
@@ -65,8 +67,15 @@ fi
 
 # ── Verificação do jq ──────────────────────────────────────────────────────────
 if ! command -v jq &>/dev/null; then
-  printf "%b\n" "${C_RED}[statusline] jq não encontrado — instale: winget install jqlang.jq${RESET}"
-  printf "%b\n" "${C_DIM}ou via scoop: scoop install jq${RESET}"
+  # Sugere o comando de instalação adequado ao sistema atual
+  if   command -v pacman  &>/dev/null; then _jq_hint="sudo pacman -S jq"
+  elif command -v apt-get &>/dev/null; then _jq_hint="sudo apt install jq"
+  elif command -v dnf     &>/dev/null; then _jq_hint="sudo dnf install jq"
+  elif command -v brew    &>/dev/null; then _jq_hint="brew install jq"
+  elif command -v scoop   &>/dev/null; then _jq_hint="scoop install jq"
+  else                                       _jq_hint="winget install jqlang.jq"
+  fi
+  printf "%b\n" "${C_RED}[statusline] jq não encontrado — instale: ${_jq_hint}${RESET}"
   exit 0
 fi
 
@@ -86,6 +95,10 @@ JSON_INPUT=$(cat)
   IFS= read -r resets_at_7d
   IFS= read -r git_branch
   IFS= read -r full_dir
+  IFS= read -r cost_cents
+  IFS= read -r lines_added
+  IFS= read -r lines_removed
+  IFS= read -r output_style
   IFS= read -r _sentinel
 } <<< "$(jq -r '
   .model.display_name // "Unknown",
@@ -97,6 +110,10 @@ JSON_INPUT=$(cat)
   ((.rate_limits.seven_day.resets_at // -1) | floor),
   (.worktree.branch // ""),
   (.workspace.current_dir // ""),
+  (((.cost.total_cost_usd // 0) * 100) | floor),
+  ((.cost.total_lines_added // 0) | floor),
+  ((.cost.total_lines_removed // 0) | floor),
+  (.output_style.name // ""),
   "END"
 ' <<< "$JSON_INPUT" | tr -d '\r')"
 
@@ -188,7 +205,12 @@ make_bar "$ctx_pct" 20
 ctx_bar="$BAR_RESULT"
 ctx_pct_str=$(pct_color "$ctx_pct" "$SYM_WARN")
 
-line1="${C_CYAN}${SYM_MODEL}${model_name}${C_DIM}${ctx_label}${RESET}"
+line1="${C_CYAN}${SYM_MODEL}${model_name}${RESET}"
+# Output style — só aparece quando não for o padrão
+if [[ -n "$output_style" && "$output_style" != "default" && "$output_style" != "null" ]]; then
+  line1+=" ${C_YELLOW}[${output_style}]${RESET}"
+fi
+line1+="${C_DIM}${ctx_label}${RESET}"
 line1+="${SEP}${C_DIM}${SYM_CTX}${RESET}${ctx_bar} ${ctx_pct_str}"
 
 # Sessão 5h: barra + % + tempo para reset
@@ -212,15 +234,22 @@ if (( rate_7d >= 0 )); then
   fi
 fi
 
-# ── Linha 2: branch + pasta (opcional, requer CLAUDE_STATUSLINE_GIT=1) ─────────
+# Custo + linhas da sessão (opcional, requer CLAUDE_STATUSLINE_COST=1)
+if [[ $FORCE_COST -eq 1 ]]; then
+  _cost_str=$(printf '%d.%02d' $(( cost_cents / 100 )) $(( cost_cents % 100 )))
+  line1+="${SEP}${C_DIM}\$${RESET}${C_GRAY}${_cost_str}${RESET}"
+  line1+=" ${C_GREEN}+${lines_added}${RESET} ${C_RED}-${lines_removed}${RESET}"
+fi
+
+# ── Linha 2: branch + caminho (opcional) ───────────────────────────────────────
+#   CLAUDE_STATUSLINE_GIT=1  → branch (+ dirty flag) e nome da pasta
+#   CLAUDE_STATUSLINE_PWD=1  → caminho completo no lugar do nome da pasta
 line2=""
 
-if [[ $FORCE_GIT -eq 1 ]]; then
-  # Extrai nome da pasta atual
-  curr_dir="${full_dir//\\//}"
-  curr_dir="${curr_dir%/}"
-  curr_dir="${curr_dir##*/}"
-  [[ -z "$curr_dir" ]] && curr_dir="$full_dir"
+if [[ $FORCE_GIT -eq 1 || $FORCE_PWD -eq 1 ]]; then
+  # Normaliza barras invertidas do Windows (C:\path → C:/path)
+  norm_dir="${full_dir//\\//}"
+  norm_dir="${norm_dir%/}"
 
   # Converte path Windows para git (C:\path → /c/path)
   git_dir="$full_dir"
@@ -230,41 +259,55 @@ if [[ $FORCE_GIT -eq 1 ]]; then
     git_dir="${git_dir//\\//}"
   fi
 
-  # Se o JSON não trouxer a branch, busca via git diretamente
-  if [[ -z "$git_branch" && -n "$git_dir" ]]; then
-    git_branch=$(git -C "$git_dir" rev-parse --abbrev-ref HEAD 2>/dev/null)
+  # ── Branch + dirty flag (só com CLAUDE_STATUSLINE_GIT=1) ──
+  branch_str=""
+  if [[ $FORCE_GIT -eq 1 ]]; then
+    # Se o JSON não trouxer a branch, busca via git diretamente
+    if [[ -z "$git_branch" && -n "$git_dir" ]]; then
+      git_branch=$(git -C "$git_dir" rev-parse --abbrev-ref HEAD 2>/dev/null)
+    fi
+
+    if [[ -n "$git_branch" ]]; then
+      CACHE_FILE="/tmp/claude-statusline-git-cache"
+      cache_valid=0
+      if [[ -f "$CACHE_FILE" ]]; then
+        _mtime=$(stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)
+        _cnow=$(date +%s)
+        (( (_cnow - _mtime) < 5 )) && cache_valid=1
+      fi
+
+      if [[ $cache_valid -eq 1 ]]; then
+        IFS='|' read -r _branch _dirty < "$CACHE_FILE"
+      else
+        _branch="$git_branch"
+        _dirty=""
+        if [[ -n "$git_dir" ]] && ! git -C "$git_dir" diff --quiet 2>/dev/null || \
+           [[ -n "$git_dir" ]] && ! git -C "$git_dir" diff --cached --quiet 2>/dev/null; then
+          _dirty="*"
+        fi
+        printf '%s|%s' "$_branch" "$_dirty" > "$CACHE_FILE"
+      fi
+
+      branch_str="${C_PINK}${SYM_BRANCH}${_branch}${C_YELLOW}${_dirty}${RESET}"
+    fi
   fi
 
-  # Branch + dirty flag com cache de 5s (GNU stat -c %Y)
-  branch_str=""
-  if [[ -n "$git_branch" ]]; then
-    CACHE_FILE="/tmp/claude-statusline-git-cache"
-    cache_valid=0
-    if [[ -f "$CACHE_FILE" ]]; then
-      _mtime=$(stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)
-      _cnow=$(date +%s)
-      (( (_cnow - _mtime) < 5 )) && cache_valid=1
+  # ── Caminho: completo (PWD) ou só o nome da pasta ──
+  if [[ $FORCE_PWD -eq 1 ]]; then
+    path_disp="$norm_dir"
+    # Comprime o diretório home para ~
+    if [[ -n "$HOME" && "$path_disp" == "$HOME"* ]]; then
+      path_disp="~${path_disp#"$HOME"}"
     fi
-
-    if [[ $cache_valid -eq 1 ]]; then
-      IFS='|' read -r _branch _dirty < "$CACHE_FILE"
-    else
-      _branch="$git_branch"
-      _dirty=""
-      if [[ -n "$git_dir" ]] && ! git -C "$git_dir" diff --quiet 2>/dev/null || \
-         [[ -n "$git_dir" ]] && ! git -C "$git_dir" diff --cached --quiet 2>/dev/null; then
-        _dirty="*"
-      fi
-      printf '%s|%s' "$_branch" "$_dirty" > "$CACHE_FILE"
-    fi
-
-    branch_str="${C_PINK}${SYM_BRANCH}${_branch}${C_YELLOW}${_dirty}${RESET}"
+  else
+    path_disp="${norm_dir##*/}"
+    [[ -z "$path_disp" ]] && path_disp="$norm_dir"
   fi
 
   [[ -n "$branch_str" ]] && line2+="$branch_str"
-  if [[ -n "$curr_dir" ]]; then
+  if [[ -n "$path_disp" ]]; then
     [[ -n "$line2" ]] && line2+="${SEP}"
-    line2+="${C_CYAN}${SYM_FOLDER}${curr_dir}${RESET}"
+    line2+="${C_CYAN}${SYM_FOLDER}${path_disp}${RESET}"
   fi
 fi
 

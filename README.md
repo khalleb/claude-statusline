@@ -1,6 +1,6 @@
 # claude-statusline
 
-A lightweight status bar for [Claude Code](https://claude.ai/code) running in **Git Bash on Windows**.
+A lightweight status bar for [Claude Code](https://claude.ai/code) running in **Git Bash or PowerShell on Windows** (and in **WSL/Linux**).
 
 Displays model, context usage, current session limit, and weekly session limit — all in one line, updated after every response. Optionally shows the current git branch and folder on a second line.
 
@@ -53,6 +53,8 @@ Displays model, context usage, current session limit, and weekly session limit �
 | [jq](https://jqlang.github.io/jq/) | JSON parsing | `winget install jqlang.jq` |
 | [CaskaydiaCove NF](https://www.nerdfonts.com/) *(optional)* | Nerd Font icons | See [Font Setup](#font-setup-optional) |
 
+> **Using PowerShell?** Claude Code launches the status line through `bash`, so **Git Bash is required even when you start Claude Code from PowerShell**. The PowerShell installer (`install.ps1`) only copies the script and configures `settings.json` — the script itself always runs under `bash`.
+
 ---
 
 ## Installation
@@ -63,14 +65,21 @@ git clone https://github.com/khalleb/claude-statusline.git
 cd claude-statusline
 ```
 
-**2. Run the installer:**
+**2. Run the installer** — pick the one for your shell:
+
+**Git Bash / WSL / Linux:**
 ```bash
 bash install.sh
 ```
 
-The installer will:
-- Check that `jq` is available
-- Copy `statusline.sh` to `~/.claude/statusline.sh`
+**PowerShell (Windows):**
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+Both installers do the same thing:
+- Check that `jq` is available (and warn if `git` / `bash` are missing)
+- Copy `statusline.sh` to `~/.claude/statusline.sh` (stripping `\r` so it stays LF)
 - Offer to update `~/.claude/settings.json` automatically
 
 **3. Add `statusLine` to `~/.claude/settings.json`** (if not done automatically):
@@ -147,6 +156,8 @@ The recommended way to set variables is via `~/.claude/settings.json` under the 
 |----------|-------|--------|
 | `CLAUDE_STATUSLINE_NERDFONT` | `1` | Enable Nerd Font icons (requires CaskaydiaCove NF or JetBrainsMono NF) |
 | `CLAUDE_STATUSLINE_GIT` | `1` | Show git branch and folder name on line 2 |
+| `CLAUDE_STATUSLINE_PWD` | `1` | Line 2: show the full current path instead of just the folder name (`$HOME` shown as `~`) |
+| `CLAUDE_STATUSLINE_COST` | `1` | Line 1: show session cost (`$X.XX`) + lines added/removed (`+N -N`) |
 | `CLAUDE_STATUSLINE_ASCII` | `1` | Force plain ASCII mode (no Unicode, no colors) |
 | `CLAUDE_STATUSLINE_DEBUG` | `1` | Write raw JSON to `/tmp/claude-sl-debug.json` for inspection |
 
@@ -194,7 +205,8 @@ Runs 5 scenarios: normal, warning (75%), danger (92%), no rate limits, and fresh
 ```
 claude-statusline/
 ├── statusline.sh     # Main script — called by Claude Code on every response
-├── install.sh        # Installer — copies script and configures settings.json
+├── install.sh        # Installer (Git Bash / WSL / Linux)
+├── install.ps1       # Installer (PowerShell on Windows)
 ├── test-mock.sh      # Test suite with mock JSON payloads
 ├── CLAUDE.md         # Guidance for Claude Code when working in this repo
 ├── README.md         # English documentation

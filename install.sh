@@ -14,10 +14,17 @@ echo ""
 if ! command -v jq &>/dev/null; then
   echo "ERRO: jq não encontrado."
   echo ""
-  echo "Instale com uma das opções abaixo e tente novamente:"
-  echo "  winget install jqlang.jq"
-  echo "  scoop install jq"
-  echo "  choco install jq"
+  echo "Instale com o comando adequado ao seu sistema e tente novamente:"
+  if   command -v pacman  &>/dev/null; then echo "  sudo pacman -S jq"
+  elif command -v apt-get &>/dev/null; then echo "  sudo apt install jq"
+  elif command -v dnf     &>/dev/null; then echo "  sudo dnf install jq"
+  elif command -v brew    &>/dev/null; then echo "  brew install jq"
+  elif command -v scoop   &>/dev/null; then echo "  scoop install jq"
+  else
+    echo "  winget install jqlang.jq   (Windows)"
+    echo "  scoop install jq           (Windows)"
+    echo "  choco install jq           (Windows)"
+  fi
   exit 1
 fi
 echo "[OK] jq $(jq --version)"
@@ -27,8 +34,9 @@ if ! command -v git &>/dev/null; then
 fi
 
 # ── Cópia do script ────────────────────────────────────────────────────────────
+# Remove CR (\r) na cópia para funcionar tanto no Git Bash quanto no WSL/Linux
 mkdir -p "$(dirname "$TARGET")"
-cp "$SCRIPT_DIR/statusline.sh" "$TARGET"
+tr -d '\r' < "$SCRIPT_DIR/statusline.sh" > "$TARGET"
 chmod +x "$TARGET"
 echo "[OK] Instalado em: $TARGET"
 
@@ -78,4 +86,6 @@ echo ""
 echo "Variáveis de ambiente opcionais:"
 echo "  CLAUDE_STATUSLINE_ASCII=1      — modo ASCII puro (sem Unicode)"
 echo "  CLAUDE_STATUSLINE_NERDFONT=1   — ícones Nerd Font"
-echo "  CLAUDE_STATUSLINE_POWERLINE=1  — separadores Powerline (requer Nerd Font)"
+echo "  CLAUDE_STATUSLINE_GIT=1        — linha 2: branch + nome da pasta"
+echo "  CLAUDE_STATUSLINE_PWD=1        — linha 2: caminho completo (no lugar do nome da pasta)"
+echo "  CLAUDE_STATUSLINE_COST=1       — custo da sessão + linhas adicionadas/removidas"
