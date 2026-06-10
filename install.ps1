@@ -76,6 +76,16 @@ if (Test-Path $ConfigSource) {
     Write-Host "[OK] Configurador instalado em: $ConfigTarget (LF, UTF-8)" -ForegroundColor Green
 }
 
+$CommandSource = Join-Path $ScriptDir 'commands\statusline.md'
+$CommandTarget = Join-Path $ClaudeDir 'commands\statusline.md'
+if (Test-Path $CommandSource) {
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $CommandTarget) | Out-Null
+    $commandText = [System.IO.File]::ReadAllText($CommandSource)
+    $commandText = $commandText.Replace("`r", "")
+    [System.IO.File]::WriteAllText($CommandTarget, $commandText, $utf8NoBomSh)
+    Write-Host "[OK] Comando /statusline instalado em: $CommandTarget (LF, UTF-8)" -ForegroundColor Green
+}
+
 # ── Configuração do settings.json ─────────────────────────────────────────────
 Write-Host ""
 Write-Host "==> Configuracao necessaria em: $Settings"
@@ -144,6 +154,7 @@ Write-Host "  CLAUDE_STATUSLINE_NERDFONT=1                       - icones Nerd F
 Write-Host "  CLAUDE_STATUSLINE_GIT=1                            - linha 2: branch git + pasta"
 Write-Host "  CLAUDE_STATUSLINE_PWD=1                            - linha 2: caminho completo"
 Write-Host "  CLAUDE_STATUSLINE_COST=1                           - custo da sessao + linhas alteradas"
+Write-Host "  CLAUDE_STATUSLINE_ACCOUNT=1                        - linha 2: conta logada (org ou e-mail)"
 Write-Host "  CLAUDE_STATUSLINE_NOUPDATE=1                       - desativa verificacao de atualizacao"
 Write-Host "  CLAUDE_STATUSLINE_UPDATE_MODE=prompt|auto|reminder - modo de atualizacao (padrao: prompt)"
 Write-Host ""

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A status bar for Claude Code running in **Git Bash or PowerShell on Windows**, and also in **WSL/Linux**. Claude Code calls `statusline.sh` via its `statusLine` hook after every response, piping session state as JSON to stdin. The script outputs two lines; Claude Code renders them in the status area.
 
 - **Line 1** (always): model + optional output style + context bar + 5h session bar + reset times + optional session cost/lines (`CLAUDE_STATUSLINE_COST=1`)
-- **Line 2** (optional): git branch (`CLAUDE_STATUSLINE_GIT=1`) + current folder name, or full path (`CLAUDE_STATUSLINE_PWD=1`)
+- **Line 2** (optional): git branch (`CLAUDE_STATUSLINE_GIT=1`) + current folder name, or full path (`CLAUDE_STATUSLINE_PWD=1`) + logged-in account (`CLAUDE_STATUSLINE_ACCOUNT=1`)
 
 ## Running Tests
 
@@ -56,6 +56,7 @@ Set via `~/.claude/settings.json` under the `env` key — this works regardless 
 | `CLAUDE_STATUSLINE_GIT=1` | Line 2: git branch + folder name |
 | `CLAUDE_STATUSLINE_PWD=1` | Line 2: full current path instead of just the folder name (`$HOME` shown as `~`) |
 | `CLAUDE_STATUSLINE_COST=1` | Line 1: session cost (`$X.XX`) + lines added/removed (`+N -N`) |
+| `CLAUDE_STATUSLINE_ACCOUNT=1` | Line 2: logged-in account — `organizationName` from `.claude.json`, NOT from the statusline JSON; auto-generated personal org names (`...'s Organization`) and missing org fall back to `emailAddress`; respects `CLAUDE_CONFIG_DIR`; 30s cache per config path |
 | `CLAUDE_STATUSLINE_ASCII=1` | Plain ASCII mode, no Unicode, no colors |
 | `CLAUDE_STATUSLINE_DEBUG=1` | Writes raw JSON to `/tmp/claude-sl-debug.json` |
 | `CLAUDE_STATUSLINE_NOUPDATE=1` | Disables the GitHub update check entirely |
@@ -80,7 +81,7 @@ Everything runs in a single file: `statusline.sh`. Execution order:
 8. **`pct_color <pct>`** — returns colored percentage string (green/yellow/red thresholds: 70/90)
 9. **Line 1 assembly** — model + output style (when non-`default`) + context bar + 5h bar + reset times + session cost/lines (when `FORCE_COST=1`) + update notice (when newer release exists on GitHub); cost is parsed as integer cents (`total_cost_usd * 100 | floor`) to avoid float math in bash
   - **Update check** — `VERSION="x.y.z"` constant in the script; once per day (cache at `/tmp/claude-statusline-update-cache`, TTL 86400s) a background `curl` fetches the latest GitHub release tag; if `latest != current`, appends `↑ x.y.z` to line 1; requires `curl`; disabled by `FORCE_NOUPDATE=1`
-10. **Line 2 assembly** — when `FORCE_GIT=1` or `FORCE_PWD=1`; branch (gated by `FORCE_GIT`) from `worktree.branch` JSON field, falls back to `git rev-parse --abbrev-ref HEAD` when empty, dirty flag `*` via git diff with 5s cache; path shows full normalised dir (`FORCE_PWD`) or just the folder basename
+10. **Line 2 assembly** — when `FORCE_GIT=1`, `FORCE_PWD=1` or `FORCE_ACCOUNT=1`; branch (gated by `FORCE_GIT`) from `worktree.branch` JSON field, falls back to `git rev-parse --abbrev-ref HEAD` when empty, dirty flag `*` via git diff with 5s cache; path shows full normalised dir (`FORCE_PWD`) or just the folder basename; account (gated by `FORCE_ACCOUNT`) read via `jq` from `${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json`: `.oauthAccount.organizationName`, falling back to `.emailAddress` when empty or auto-generated (`endswith("'s Organization")`, suffix passed via `jq --arg` because of the apostrophe) — cached 30s in `/tmp/claude-statusline-account-cache-<cksum of config path>` so the (large) config file isn't parsed on every render
 
 ## Windows-Specific Behaviour
 

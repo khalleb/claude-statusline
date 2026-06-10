@@ -9,18 +9,19 @@ RST="\033[0m"; BOLD="\033[1m"; DIM="\033[2m"; REV="\033[7m"
 CY="\033[36m"; GR="\033[32m"; YL="\033[33m"
 
 # ── Definição das opções ───────────────────────────────────────────────────────
-KEYS=(  nerdfont     git                    pwd                     cost                    ascii                 noupdate                      update-mode              update-freq            )
-VARS=(  CLAUDE_STATUSLINE_NERDFONT  CLAUDE_STATUSLINE_GIT  CLAUDE_STATUSLINE_PWD  CLAUDE_STATUSLINE_COST  CLAUDE_STATUSLINE_ASCII  CLAUDE_STATUSLINE_NOUPDATE  CLAUDE_STATUSLINE_UPDATE_MODE  CLAUDE_STATUSLINE_UPDATE_FREQ  )
+KEYS=(  nerdfont     git                    pwd                     account                    cost                    ascii                 noupdate                      update-mode              update-freq            )
+VARS=(  CLAUDE_STATUSLINE_NERDFONT  CLAUDE_STATUSLINE_GIT  CLAUDE_STATUSLINE_PWD  CLAUDE_STATUSLINE_ACCOUNT  CLAUDE_STATUSLINE_COST  CLAUDE_STATUSLINE_ASCII  CLAUDE_STATUSLINE_NOUPDATE  CLAUDE_STATUSLINE_UPDATE_MODE  CLAUDE_STATUSLINE_UPDATE_FREQ  )
 DESCS=( "Ícones Nerd Font (CaskaydiaCove NF / JetBrainsMono NF)"
         "Linha 2: branch git + nome da pasta"
         "Linha 2: caminho completo (\$HOME → ~)"
+        "Linha 2: conta logada (organização ou e-mail)"
         "Linha 1: custo da sessão + linhas +/−"
         "Modo ASCII puro — sem Unicode, sem cores"
         "Desativa verificação de atualização no GitHub"
         "Modo de atualização: prompt / auto / reminder / disabled"
         "Frequência de verificação em dias" )
-TYPES=( toggle toggle toggle toggle toggle toggle cycle number )
-CYCLES=( "" "" "" "" "" "" "prompt,auto,reminder,disabled" "" )
+TYPES=( toggle toggle toggle toggle toggle toggle toggle cycle number )
+CYCLES=( "" "" "" "" "" "" "" "prompt,auto,reminder,disabled" "" )
 N=${#KEYS[@]}
 
 declare -a VALUES

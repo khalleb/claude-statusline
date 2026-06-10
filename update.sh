@@ -139,9 +139,10 @@ _raw_base="https://raw.githubusercontent.com/${REPO}/refs/tags/${_tag}"
 _tmp_sl=$(mktemp)
 _tmp_up=$(mktemp)
 _tmp_cfg=$(mktemp)
+_tmp_cmd=$(mktemp)
 
 if ! curl -sf --max-time 30 "${_raw_base}/statusline.sh" -o "$_tmp_sl" 2>/dev/null; then
-  rm -f "$_tmp_sl" "$_tmp_up" "$_tmp_cfg"
+  rm -f "$_tmp_sl" "$_tmp_up" "$_tmp_cfg" "$_tmp_cmd"
   printf "%b\n" "${C_RED}  Erro ao baixar. Tente novamente mais tarde.${RESET}"
   exit 1
 fi
@@ -166,7 +167,15 @@ if [[ -s "$_tmp_cfg" ]]; then
   chmod +x "$_cfg_target"
 fi
 
-rm -f "$_tmp_sl" "$_tmp_up" "$_tmp_cfg"
+# Atualiza o comando /statusline (falha silenciosa — releases antigas não têm o arquivo)
+_cmd_target="$HOME/.claude/commands/statusline.md"
+curl -sf --max-time 30 "${_raw_base}/commands/statusline.md" -o "$_tmp_cmd" 2>/dev/null || true
+if [[ -s "$_tmp_cmd" ]]; then
+  mkdir -p "$(dirname "$_cmd_target")"
+  tr -d '\r' < "$_tmp_cmd" > "$_cmd_target"
+fi
+
+rm -f "$_tmp_sl" "$_tmp_up" "$_tmp_cfg" "$_tmp_cmd"
 
 # Atualiza cache (evita notificação na próxima execução do status line)
 printf '%s' "$latest" > /tmp/claude-statusline-update-cache

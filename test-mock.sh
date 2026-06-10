@@ -117,6 +117,40 @@ run_test "Linha 2 com branch (GIT=1)" "$(cat <<EOF
 EOF
 )" "CLAUDE_STATUSLINE_GIT=1"
 
+# Conta logada: aponta CLAUDE_CONFIG_DIR para um .claude.json fake (teste determinístico)
+_acct_dir=$(mktemp -d)
+echo '{"oauthAccount":{"organizationName":"Acme Corp","emailAddress":"dev@acme.com"}}' > "$_acct_dir/.claude.json"
+run_test "Linha 2 com conta (ACCOUNT=1 + GIT=1)" "$(cat <<EOF
+{
+  "model": {"display_name": "Claude Sonnet 4.6"},
+  "context_window": {"used_percentage": 20, "context_window_size": 200000},
+  "rate_limits": {
+    "five_hour": {"used_percentage": 10, "resets_at": $((_now + 14400))},
+    "seven_day":  {"used_percentage": 3,  "resets_at": $((_now + 600000))}
+  },
+  "worktree": {"branch": "feature/minha-branch"},
+  "workspace": {"current_dir": "C:/repositorios/meu-projeto"}
+}
+EOF
+)" "CLAUDE_STATUSLINE_ACCOUNT=1 CLAUDE_STATUSLINE_GIT=1 CLAUDE_CONFIG_DIR=$_acct_dir"
+rm -rf "$_acct_dir"
+
+# Conta pessoal: organizationName auto-gerado ("...'s Organization") → mostra o e-mail
+_acct_dir=$(mktemp -d)
+echo "{\"oauthAccount\":{\"organizationName\":\"dev@acme.com's Organization\",\"emailAddress\":\"dev@acme.com\"}}" > "$_acct_dir/.claude.json"
+run_test "Conta pessoal (org auto-gerada → e-mail)" "$(cat <<EOF
+{
+  "model": {"display_name": "Claude Sonnet 4.6"},
+  "context_window": {"used_percentage": 20, "context_window_size": 200000},
+  "rate_limits": {
+    "five_hour": {"used_percentage": 10, "resets_at": $((_now + 14400))},
+    "seven_day":  {"used_percentage": 3,  "resets_at": $((_now + 600000))}
+  }
+}
+EOF
+)" "CLAUDE_STATUSLINE_ACCOUNT=1 CLAUDE_CONFIG_DIR=$_acct_dir"
+rm -rf "$_acct_dir"
+
 # Aviso de atualização: cria cache com versão mais nova para simular GitHub release
 echo "2.0.0" > /tmp/claude-statusline-update-cache
 run_test "Aviso de atualização disponível (v2.0.0)" "$(cat <<EOF

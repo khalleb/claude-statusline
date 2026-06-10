@@ -33,12 +33,13 @@ Displays model, context usage, current session limit, and weekly session limit �
 | `$0.03 +12 -4` | Session cost + lines added/removed (requires `CLAUDE_STATUSLINE_COST=1`) |
 | `↑ 1.2.0` | Update available (clickable link in supported terminals) |
 
-**Line 2 — optional (`CLAUDE_STATUSLINE_GIT=1` or `CLAUDE_STATUSLINE_PWD=1`):**
+**Line 2 — optional (`CLAUDE_STATUSLINE_GIT=1`, `CLAUDE_STATUSLINE_PWD=1` or `CLAUDE_STATUSLINE_ACCOUNT=1`):**
 
 | Segment | Description |
 |---------|-------------|
 | ` master` | Current git branch (`*` suffix if there are uncommitted changes) |
 | ` my-project` | Folder name (default) or full path with `CLAUDE_STATUSLINE_PWD=1` |
+| ` Acme Corp` | Logged-in account — organization name, or e-mail as fallback (requires `CLAUDE_STATUSLINE_ACCOUNT=1`) |
 
 **Color coding:**
 - 🟢 Green — 0–69%
@@ -111,15 +112,16 @@ Type `/statusline` in any Claude Code session to open the interactive configurat
   [X] 1  nerdfont     Ícones Nerd Font (CaskaydiaCove NF)
   [X] 2  git          Linha 2: branch git + pasta
   [ ] 3  pwd          Linha 2: caminho completo
-  [X] 4  cost         Custo da sessão na linha 1
-  [ ] 5  ascii        Modo ASCII puro
-  [ ] 6  noupdate     Sem verificação de update
-  [prompt] 7  update-mode  Modo de atualização
-  [1d]     8  update-freq  Frequência de verificação
+  [ ] 4  account      Linha 2: conta logada
+  [X] 5  cost         Custo da sessão na linha 1
+  [ ] 6  ascii        Modo ASCII puro
+  [ ] 7  noupdate     Sem verificação de update
+  [prompt] 8  update-mode  Modo de atualização
+  [1d]     9  update-freq  Frequência de verificação
 
   ──────────────────────────────────────────────────
   Digite o número para alternar  •  ex: 3  ou  1 5
-  "7 auto" para update-mode  •  "8 7" para 7 dias
+  "8 auto" para update-mode  •  "9 7" para 7 dias
   "q" para sair
 ```
 
@@ -163,6 +165,7 @@ Add variables under the `env` key:
 | `CLAUDE_STATUSLINE_GIT` | `1` | Show git branch and folder name on line 2 |
 | `CLAUDE_STATUSLINE_PWD` | `1` | Line 2: show the full current path instead of just the folder name (`$HOME` shown as `~`) |
 | `CLAUDE_STATUSLINE_COST` | `1` | Line 1: show session cost (`$X.XX`) + lines added/removed (`+N -N`) |
+| `CLAUDE_STATUSLINE_ACCOUNT` | `1` | Line 2: show the logged-in account (organization name, or e-mail as fallback) — useful when switching between multiple Claude accounts |
 | `CLAUDE_STATUSLINE_ASCII` | `1` | Force plain ASCII mode (no Unicode, no colors) |
 | `CLAUDE_STATUSLINE_DEBUG` | `1` | Write raw JSON to `/tmp/claude-sl-debug.json` for inspection |
 | `CLAUDE_STATUSLINE_NOUPDATE` | `1` | Disable the GitHub update check entirely |
@@ -170,6 +173,8 @@ Add variables under the `env` key:
 | `CLAUDE_STATUSLINE_UPDATE_FREQ` | number | Check frequency in days (default: `1`) |
 
 The `output_style.name` is shown automatically on line 1 when set and not `"default"`. No extra variable needed.
+
+The account segment is not part of the JSON Claude Code sends — it is read from `.claude.json` (`.oauthAccount`), which `/login` keeps up to date. `CLAUDE_CONFIG_DIR` is respected for multi-profile setups, and the value is cached for 30 seconds. Personal (Pro/Max) accounts have an auto-generated organization name like `you@mail.com's Organization` — in that case the e-mail is shown instead; real Team/Enterprise organizations show their name.
 
 ---
 

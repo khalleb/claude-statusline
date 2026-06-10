@@ -33,12 +33,13 @@ Exibe modelo, uso do contexto, limite da sessão atual e limite semanal — tudo
 | `$0.03 +12 -4` | Custo da sessão + linhas adicionadas/removidas (requer `CLAUDE_STATUSLINE_COST=1`) |
 | `↑ 1.2.0` | Atualização disponível (link clicável em terminais compatíveis) |
 
-**Linha 2 — opcional (`CLAUDE_STATUSLINE_GIT=1` ou `CLAUDE_STATUSLINE_PWD=1`):**
+**Linha 2 — opcional (`CLAUDE_STATUSLINE_GIT=1`, `CLAUDE_STATUSLINE_PWD=1` ou `CLAUDE_STATUSLINE_ACCOUNT=1`):**
 
 | Segmento | Descrição |
 |----------|-----------|
 | ` master` | Branch git atual (sufixo `*` se houver alterações não commitadas) |
 | ` meu-projeto` | Nome da pasta (padrão) ou caminho completo com `CLAUDE_STATUSLINE_PWD=1` |
+| ` Acme Corp` | Conta logada — nome da organização, ou e-mail como fallback (requer `CLAUDE_STATUSLINE_ACCOUNT=1`) |
 
 **Cores:**
 - 🟢 Verde — 0–69%
@@ -111,15 +112,16 @@ Digite `/statusline` em qualquer sessão do Claude Code para abrir o menu intera
   [X] 1  nerdfont     Ícones Nerd Font (CaskaydiaCove NF)
   [X] 2  git          Linha 2: branch git + pasta
   [ ] 3  pwd          Linha 2: caminho completo
-  [X] 4  cost         Custo da sessão na linha 1
-  [ ] 5  ascii        Modo ASCII puro
-  [ ] 6  noupdate     Sem verificação de update
-  [prompt] 7  update-mode  Modo de atualização
-  [1d]     8  update-freq  Frequência de verificação
+  [ ] 4  account      Linha 2: conta logada
+  [X] 5  cost         Custo da sessão na linha 1
+  [ ] 6  ascii        Modo ASCII puro
+  [ ] 7  noupdate     Sem verificação de update
+  [prompt] 8  update-mode  Modo de atualização
+  [1d]     9  update-freq  Frequência de verificação
 
   ──────────────────────────────────────────────────
   Digite o número para alternar  •  ex: 3  ou  1 5
-  "7 auto" para update-mode  •  "8 7" para 7 dias
+  "8 auto" para update-mode  •  "9 7" para 7 dias
   "q" para sair
 ```
 
@@ -163,6 +165,7 @@ Adicione as variáveis na chave `env`:
 | `CLAUDE_STATUSLINE_GIT` | `1` | Linha 2: branch git + nome da pasta |
 | `CLAUDE_STATUSLINE_PWD` | `1` | Linha 2: caminho completo no lugar do nome da pasta (`$HOME` exibido como `~`) |
 | `CLAUDE_STATUSLINE_COST` | `1` | Linha 1: custo da sessão (`$X.XX`) + linhas adicionadas/removidas (`+N -N`) |
+| `CLAUDE_STATUSLINE_ACCOUNT` | `1` | Linha 2: conta logada (nome da organização, ou e-mail como fallback) — útil para quem alterna entre múltiplas contas |
 | `CLAUDE_STATUSLINE_ASCII` | `1` | Força modo ASCII puro (sem Unicode, sem cores) |
 | `CLAUDE_STATUSLINE_DEBUG` | `1` | Grava o JSON em `/tmp/claude-sl-debug.json` para inspeção |
 | `CLAUDE_STATUSLINE_NOUPDATE` | `1` | Desativa a verificação de atualização do GitHub |
@@ -170,6 +173,8 @@ Adicione as variáveis na chave `env`:
 | `CLAUDE_STATUSLINE_UPDATE_FREQ` | número | Frequência de verificação em dias (padrão: `1`) |
 
 O `output_style.name` é exibido automaticamente na linha 1 quando definido e diferente de `"default"`. Nenhuma variável extra necessária.
+
+O segmento da conta não faz parte do JSON que o Claude Code envia — ele é lido do `.claude.json` (`.oauthAccount`), que o `/login` mantém atualizado. `CLAUDE_CONFIG_DIR` é respeitado para setups multi-perfil, e o valor fica em cache por 30 segundos. Contas pessoais (Pro/Max) têm um nome de organização auto-gerado como `voce@mail.com's Organization` — nesse caso o e-mail é exibido no lugar; organizações reais (Team/Enterprise) mostram o nome.
 
 ---
 

@@ -8,6 +8,7 @@ FORCE_NERDFONT="${CLAUDE_STATUSLINE_NERDFONT:-0}"
 FORCE_GIT="${CLAUDE_STATUSLINE_GIT:-0}"
 FORCE_PWD="${CLAUDE_STATUSLINE_PWD:-0}"
 FORCE_COST="${CLAUDE_STATUSLINE_COST:-0}"
+FORCE_ACCOUNT="${CLAUDE_STATUSLINE_ACCOUNT:-0}"
 FORCE_NOUPDATE="${CLAUDE_STATUSLINE_NOUPDATE:-0}"
 
 # ── True-color detection ───────────────────────────────────────────────────────
@@ -47,6 +48,7 @@ if [[ $FORCE_ASCII -eq 1 ]]; then
   SYM_WARN="!"
   SYM_BRANCH="| "
   SYM_FOLDER=""
+  SYM_ACCOUNT="@"
   SYM_SEP=" | "
   SYM_UPDATE="[update] "
 elif [[ $FORCE_NERDFONT -eq 1 ]]; then
@@ -56,6 +58,7 @@ elif [[ $FORCE_NERDFONT -eq 1 ]]; then
   SYM_WARN=$' '       #  aviso
   SYM_BRANCH=$' '     #  branch git (Powerline)
   SYM_FOLDER=$' '     #  pasta
+  SYM_ACCOUNT=$' '    #  usuário (nf-fa-user)
   SYM_SEP=" │ "
   SYM_UPDATE=$'󰚰 '    # 󰚰 update (nf-md-update)
 else
@@ -65,6 +68,7 @@ else
   SYM_WARN=" ⚠"
   SYM_BRANCH="⎇ "
   SYM_FOLDER=""
+  SYM_ACCOUNT="@"
   SYM_SEP=" │ "
   SYM_UPDATE="↑ "
 fi
@@ -205,7 +209,7 @@ pct_color() {
 SEP="${C_DIM}${SYM_SEP}${RESET}"
 
 # ── Versão e verificação de atualização ───────────────────────────────────────
-VERSION="1.2.0"
+VERSION="1.3.0"
 update_str=""
 if [[ $FORCE_NOUPDATE -eq 0 ]] && command -v curl &>/dev/null; then
   _UPDATE_CACHE="/tmp/claude-statusline-update-cache"
@@ -289,9 +293,10 @@ fi
 # Aviso de atualização disponível
 line1+="$update_str"
 
-# ── Linha 2: branch + caminho (opcional) ───────────────────────────────────────
-#   CLAUDE_STATUSLINE_GIT=1  → branch (+ dirty flag) e nome da pasta
-#   CLAUDE_STATUSLINE_PWD=1  → caminho completo no lugar do nome da pasta
+# ── Linha 2: branch + caminho + conta (opcional) ──────────────────────────────
+#   CLAUDE_STATUSLINE_GIT=1      → branch (+ dirty flag) e nome da pasta
+#   CLAUDE_STATUSLINE_PWD=1      → caminho completo no lugar do nome da pasta
+#   CLAUDE_STATUSLINE_ACCOUNT=1  → conta logada (organização ou e-mail)
 line2=""
 
 if [[ $FORCE_GIT -eq 1 || $FORCE_PWD -eq 1 ]]; then
@@ -356,6 +361,40 @@ if [[ $FORCE_GIT -eq 1 || $FORCE_PWD -eq 1 ]]; then
   if [[ -n "$path_disp" ]]; then
     [[ -n "$line2" ]] && line2+="${SEP}"
     line2+="${C_CYAN}${SYM_FOLDER}${path_disp}${RESET}"
+  fi
+fi
+
+# ── Conta logada (só com CLAUDE_STATUSLINE_ACCOUNT=1) ──
+# A conta não vem no JSON da statusline — é lida do .claude.json (atualizado
+# pelo /login). Respeita CLAUDE_CONFIG_DIR para setups com múltiplos perfis.
+if [[ $FORCE_ACCOUNT -eq 1 ]]; then
+  _claude_cfg="${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
+  # Cache por arquivo de config — instâncias paralelas com perfis diferentes não colidem
+  _cfg_key=$(printf '%s' "$_claude_cfg" | cksum | cut -d' ' -f1)
+  ACCT_CACHE="/tmp/claude-statusline-account-cache-${_cfg_key}"
+  acct_name=""
+  acct_valid=0
+  if [[ -f "$ACCT_CACHE" ]]; then
+    _amtime=$(stat -c %Y "$ACCT_CACHE" 2>/dev/null || echo 0)
+    (( (_now - _amtime) < 30 )) && acct_valid=1
+  fi
+  if [[ $acct_valid -eq 1 ]]; then
+    IFS= read -r acct_name < "$ACCT_CACHE"
+  elif [[ -f "$_claude_cfg" ]]; then
+    # Contas pessoais têm organizationName auto-gerado ("fulano@x.com's Organization")
+    # — nesse caso o e-mail é mais limpo. Orgs reais (Team/Enterprise) mostram o nome.
+    # O sufixo entra via --arg porque contém apóstrofo (conflita com as aspas do shell).
+    acct_name=$(jq -r --arg suffix "'s Organization" '
+      (.oauthAccount.organizationName // "") as $org
+      | if $org == "" or ($org | endswith($suffix))
+        then (.oauthAccount.emailAddress // "")
+        else $org end
+    ' "$_claude_cfg" 2>/dev/null | tr -d '\r')
+    printf '%s' "$acct_name" > "$ACCT_CACHE"
+  fi
+  if [[ -n "$acct_name" ]]; then
+    [[ -n "$line2" ]] && line2+="${SEP}"
+    line2+="${C_YELLOW}${SYM_ACCOUNT}${acct_name}${RESET}"
   fi
 fi
 
