@@ -167,12 +167,14 @@ if [[ -s "$_tmp_cfg" ]]; then
   chmod +x "$_cfg_target"
 fi
 
-# Atualiza o comando /statusline (falha silenciosa — releases antigas não têm o arquivo)
-_cmd_target="$HOME/.claude/commands/statusline.md"
-curl -sf --max-time 30 "${_raw_base}/commands/statusline.md" -o "$_tmp_cmd" 2>/dev/null || true
+# Atualiza o comando /statusline-khalleb (falha silenciosa — releases antigas não têm o arquivo)
+_cmd_target="$HOME/.claude/commands/statusline-khalleb.md"
+curl -sf --max-time 30 "${_raw_base}/commands/statusline-khalleb.md" -o "$_tmp_cmd" 2>/dev/null || true
 if [[ -s "$_tmp_cmd" ]]; then
   mkdir -p "$(dirname "$_cmd_target")"
   tr -d '\r' < "$_tmp_cmd" > "$_cmd_target"
+  # Remove o nome antigo, que colidia com o /statusline nativo do Claude Code
+  rm -f "$HOME/.claude/commands/statusline.md"
 fi
 
 rm -f "$_tmp_sl" "$_tmp_up" "$_tmp_cfg" "$_tmp_cmd"

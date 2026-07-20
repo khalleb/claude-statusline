@@ -76,14 +76,22 @@ if (Test-Path $ConfigSource) {
     Write-Host "[OK] Configurador instalado em: $ConfigTarget (LF, UTF-8)" -ForegroundColor Green
 }
 
-$CommandSource = Join-Path $ScriptDir 'commands\statusline.md'
-$CommandTarget = Join-Path $ClaudeDir 'commands\statusline.md'
+$CommandSource = Join-Path $ScriptDir 'commands\statusline-khalleb.md'
+$CommandTarget = Join-Path $ClaudeDir 'commands\statusline-khalleb.md'
 if (Test-Path $CommandSource) {
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $CommandTarget) | Out-Null
     $commandText = [System.IO.File]::ReadAllText($CommandSource)
     $commandText = $commandText.Replace("`r", "")
     [System.IO.File]::WriteAllText($CommandTarget, $commandText, $utf8NoBomSh)
-    Write-Host "[OK] Comando /statusline instalado em: $CommandTarget (LF, UTF-8)" -ForegroundColor Green
+    Write-Host "[OK] Comando /statusline-khalleb instalado em: $CommandTarget (LF, UTF-8)" -ForegroundColor Green
+}
+
+# Remove o comando antigo: chamava-se /statusline e colidia com o comando
+# nativo do Claude Code, fazendo aparecer duas entradas no menu.
+$LegacyCommand = Join-Path $ClaudeDir 'commands\statusline.md'
+if (Test-Path $LegacyCommand) {
+    Remove-Item $LegacyCommand -Force
+    Write-Host "[OK] Comando antigo /statusline removido (colidia com o nativo)" -ForegroundColor Green
 }
 
 # ── Configuração do settings.json ─────────────────────────────────────────────

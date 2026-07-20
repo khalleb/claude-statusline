@@ -104,9 +104,9 @@ Both installers:
 
 There are three ways to configure claude-statusline:
 
-### 1. `/statusline` command (inside Claude Code)
+### 1. `/statusline-khalleb` command (inside Claude Code)
 
-Type `/statusline` in any Claude Code session to open the interactive configuration menu:
+Type `/statusline-khalleb` in any Claude Code session to open the interactive configuration menu:
 
 ```
   [X] 1  nerdfont     Ícones Nerd Font (CaskaydiaCove NF)
@@ -321,7 +321,7 @@ This project is inspired by [claude-code-statusline](https://github.com/KCChien/
 | Rate limit reset | Not implemented | `resets_at` Unix timestamp |
 | Layout | 2 lines | **1 line + optional 2nd line** |
 | Update notifications | None | GitHub release check + auto-updater |
-| Configuration UI | None | `/statusline` command + TUI script |
+| Configuration UI | None | `/statusline-khalleb` command + TUI script |
 
 ---
 

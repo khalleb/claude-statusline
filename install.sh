@@ -50,10 +50,17 @@ tr -d '\r' < "$SCRIPT_DIR/statusline-config.sh" > "$CONFIG_TARGET"
 chmod +x "$CONFIG_TARGET"
 echo "[OK] Configurador instalado em: $CONFIG_TARGET"
 
-COMMAND_TARGET="$HOME/.claude/commands/statusline.md"
+COMMAND_TARGET="$HOME/.claude/commands/statusline-khalleb.md"
 mkdir -p "$(dirname "$COMMAND_TARGET")"
-tr -d '\r' < "$SCRIPT_DIR/commands/statusline.md" > "$COMMAND_TARGET"
-echo "[OK] Comando /statusline instalado em: $COMMAND_TARGET"
+tr -d '\r' < "$SCRIPT_DIR/commands/statusline-khalleb.md" > "$COMMAND_TARGET"
+echo "[OK] Comando /statusline-khalleb instalado em: $COMMAND_TARGET"
+
+# Remove o comando antigo: chamava-se /statusline e colidia com o comando
+# nativo do Claude Code, fazendo aparecer duas entradas no menu.
+if [[ -f "$HOME/.claude/commands/statusline.md" ]]; then
+  rm -f "$HOME/.claude/commands/statusline.md"
+  echo "[OK] Comando antigo /statusline removido (colidia com o nativo)"
+fi
 
 # ── Configuração do settings.json ─────────────────────────────────────────────
 echo ""
@@ -72,27 +79,45 @@ Adicione a chave "statusLine" no seu ~/.claude/settings.json:
 EOF
 echo ""
 
-if [[ -f "$SETTINGS" ]]; then
-  if grep -q '"statusLine"' "$SETTINGS" 2>/dev/null; then
-    echo "[INFO] statusLine já configurado em settings.json — nenhuma alteração feita."
-  else
-    echo "Configurar settings.json automaticamente? (s/N)"
-    read -r _answer
-    if [[ "$_answer" =~ ^[Ss]$ ]]; then
-      jq '. + {
-        "statusLine": {
-          "type": "command",
-          "command": "~/.claude/statusline.sh",
-          "timeout": 10
-        }
-      }' "$SETTINGS" > "${SETTINGS}.tmp" && mv "${SETTINGS}.tmp" "$SETTINGS"
-      echo "[OK] settings.json atualizado!"
-    else
-      echo "[INFO] Edite manualmente o settings.json para ativar."
-    fi
-  fi
+# Cria o settings.json quando ausente ou vazio — sem isso o jq abaixo falha e a
+# instalação termina "com sucesso" mas sem status line configurado.
+if [[ ! -s "$SETTINGS" ]]; then
+  echo "{}" > "$SETTINGS"
+  echo "[INFO] $SETTINGS não existia — criado vazio."
+fi
+
+if ! jq -e . "$SETTINGS" >/dev/null 2>&1; then
+  echo "[ERRO] $SETTINGS não é um JSON válido — corrija-o e rode o instalador de novo."
+  echo "       Nada foi alterado. Use o trecho acima para editar manualmente."
+  exit 1
+fi
+
+if jq -e 'has("statusLine")' "$SETTINGS" >/dev/null 2>&1; then
+  echo "[INFO] statusLine já configurado em settings.json — nenhuma alteração feita."
 else
-  echo "[INFO] $SETTINGS não encontrado — crie-o com o conteúdo acima."
+  echo "Configurar settings.json automaticamente? (s/N)"
+  read -r _answer
+  if [[ "$_answer" =~ ^[Ss]$ ]]; then
+    _tmp="$(mktemp)"
+    if jq '. + {
+      "statusLine": {
+        "type": "command",
+        "command": "~/.claude/statusline.sh",
+        "timeout": 10
+      }
+    }' "$SETTINGS" > "$_tmp" && [[ -s "$_tmp" ]]; then
+      cp "$SETTINGS" "${SETTINGS}.bak"
+      mv "$_tmp" "$SETTINGS"
+      echo "[OK] settings.json atualizado! (backup em ${SETTINGS}.bak)"
+    else
+      rm -f "$_tmp"
+      echo "[ERRO] Falha ao atualizar $SETTINGS — arquivo original preservado."
+      echo "       Adicione a chave statusLine manualmente com o trecho acima."
+      exit 1
+    fi
+  else
+    echo "[INFO] Edite manualmente o settings.json para ativar."
+  fi
 fi
 
 echo ""
