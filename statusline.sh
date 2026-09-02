@@ -321,7 +321,10 @@ if [[ $FORCE_GIT -eq 1 || $FORCE_PWD -eq 1 ]]; then
     fi
 
     if [[ -n "$git_branch" ]]; then
-      CACHE_FILE="/tmp/claude-statusline-git-cache"
+      # Cache por diretório — sem a chave, sessões paralelas em repos diferentes
+      # leem a branch uma da outra durante a janela de validade
+      _git_key=$(printf '%s' "$git_dir" | cksum | cut -d' ' -f1)
+      CACHE_FILE="/tmp/claude-statusline-git-cache-${_git_key}"
       cache_valid=0
       if [[ -f "$CACHE_FILE" ]]; then
         _mtime=$(stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)
