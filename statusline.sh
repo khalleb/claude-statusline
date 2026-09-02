@@ -334,9 +334,16 @@ if [[ $FORCE_GIT -eq 1 || $FORCE_PWD -eq 1 ]]; then
       else
         _branch="$git_branch"
         _dirty=""
-        if [[ -n "$git_dir" ]] && ! git -C "$git_dir" diff --quiet 2>/dev/null || \
-           [[ -n "$git_dir" ]] && ! git -C "$git_dir" diff --cached --quiet 2>/dev/null; then
-          _dirty="*"
+        if [[ -n "$git_dir" ]]; then
+          # git diff sai com 1 para "há diferenças" e 128 quando o diretório não é
+          # repo acessível — tratar todo código não-zero como sujo marca "*" sem aviso
+          git -C "$git_dir" diff --quiet 2>/dev/null
+          _rc=$?
+          if (( _rc != 1 )); then
+            git -C "$git_dir" diff --cached --quiet 2>/dev/null
+            _rc=$?
+          fi
+          (( _rc == 1 )) && _dirty="*"
         fi
         printf '%s|%s' "$_branch" "$_dirty" > "$CACHE_FILE"
       fi
