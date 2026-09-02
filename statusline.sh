@@ -321,7 +321,10 @@ if [[ $FORCE_GIT -eq 1 || $FORCE_PWD -eq 1 ]]; then
     fi
 
     if [[ -n "$git_branch" ]]; then
-      CACHE_FILE="/tmp/claude-statusline-git-cache"
+      # Cache por diretório — sem a chave, sessões paralelas em repos diferentes
+      # leem a branch uma da outra durante a janela de validade
+      _git_key=$(printf '%s' "$git_dir" | cksum | cut -d' ' -f1)
+      CACHE_FILE="/tmp/claude-statusline-git-cache-${_git_key}"
       cache_valid=0
       if [[ -f "$CACHE_FILE" ]]; then
         _mtime=$(stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)
@@ -334,9 +337,16 @@ if [[ $FORCE_GIT -eq 1 || $FORCE_PWD -eq 1 ]]; then
       else
         _branch="$git_branch"
         _dirty=""
-        if [[ -n "$git_dir" ]] && ! git -C "$git_dir" diff --quiet 2>/dev/null || \
-           [[ -n "$git_dir" ]] && ! git -C "$git_dir" diff --cached --quiet 2>/dev/null; then
-          _dirty="*"
+        if [[ -n "$git_dir" ]]; then
+          # git diff sai com 1 para "há diferenças" e 128 quando o diretório não é
+          # repo acessível — tratar todo código não-zero como sujo marca "*" sem aviso
+          git -C "$git_dir" diff --quiet 2>/dev/null
+          _rc=$?
+          if (( _rc != 1 )); then
+            git -C "$git_dir" diff --cached --quiet 2>/dev/null
+            _rc=$?
+          fi
+          (( _rc == 1 )) && _dirty="*"
         fi
         printf '%s|%s' "$_branch" "$_dirty" > "$CACHE_FILE"
       fi
